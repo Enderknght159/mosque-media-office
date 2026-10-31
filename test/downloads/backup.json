@@ -1,0 +1,1038 @@
+{
+  "version": 1,
+  "settings": {
+    "mosqueName": "مسجد النور",
+    "tagline": "المكتب الإعلامي",
+    "logo": "",
+    "security": null,
+    "links": [
+      {
+        "id": "lnk_c255bd06-8765-4978-89e5-8da17639ecea",
+        "name": "صفحة المسجد",
+        "url": "https://example.com",
+        "icon": "globe"
+      }
+    ],
+    "theme": "auto",
+    "demo": true,
+    "onboarded": true,
+    "createdAt": "2026-10-27T15:41:58.558Z",
+    "updatedAt": "2026-10-27T15:42:19.065Z",
+    "lastBackupAt": null,
+    "lastBackupType": null
+  },
+  "users": [
+    {
+      "id": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+      "name": "أحمد",
+      "color": "#0a84ff",
+      "badges": [],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+      "name": "عبدالله",
+      "color": "#6c63ff",
+      "badges": [],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+      "name": "سارة",
+      "color": "#ff375f",
+      "badges": [],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "usr_3beb154c-35f6-46e9-92cf-89fa338b7e60",
+      "name": "محمد",
+      "color": "#ff9f0a",
+      "badges": [],
+      "createdAt": "2026-10-27T15:42:11.680Z"
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "name": "درس كامل",
+      "description": "مسار إنتاج الدرس من التصوير حتى النشر.",
+      "stages": [
+        {
+          "id": "tst_112394d9-5df3-4eb4-9cce-de0d197174d4",
+          "name": "تصوير الدرس"
+        },
+        {
+          "id": "tst_d55c412c-9ba8-4794-80ae-024398e2f664",
+          "name": "تفريغ الفيديو"
+        },
+        {
+          "id": "tst_e5588fa3-449e-4470-9d52-7993329263c6",
+          "name": "مونتاج الدرس"
+        },
+        {
+          "id": "tst_8d07014f-6ced-477a-b035-c1785925c356",
+          "name": "نشر الدرس"
+        }
+      ],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "tpl_5d3a3b9a-f827-45ba-be98-5498b5a1291d",
+      "name": "خطبة كاملة",
+      "description": "مسار إنتاج خطبة الجمعة وتوثيقها.",
+      "stages": [
+        {
+          "id": "tst_0f4edd50-0c11-41fc-aa70-199316e15d45",
+          "name": "تصوير الخطبة"
+        },
+        {
+          "id": "tst_122dffb7-59ab-4402-81bd-c00dc31410c6",
+          "name": "تفريغ الخطبة"
+        },
+        {
+          "id": "tst_b18e2234-fb2e-45b1-88dd-3cc102e55e67",
+          "name": "مونتاج الخطبة"
+        },
+        {
+          "id": "tst_2a5f72bb-c797-44de-8d53-a6c9a8a15cd3",
+          "name": "نشر الخطبة"
+        }
+      ],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "tpl_d4a62a94-d10d-4ed2-9a96-0caa71205a83",
+      "name": "ريلز من فكرة",
+      "description": "إنتاج ريل قصير من اختيار الفكرة حتى النشر.",
+      "stages": [
+        {
+          "id": "tst_a5c38976-ef6d-4810-b890-753f3dc39067",
+          "name": "اختيار الفكرة"
+        },
+        {
+          "id": "tst_f08c0bd4-9cd7-49fd-8cdc-71315ed42a4a",
+          "name": "كتابة السكريبت"
+        },
+        {
+          "id": "tst_ae2bf341-8256-4893-8797-17ac56a41121",
+          "name": "تصوير الريل"
+        },
+        {
+          "id": "tst_50e418e9-57bc-4dbb-b800-fd3a55954d99",
+          "name": "تفريغ الريل"
+        },
+        {
+          "id": "tst_a4aae2d3-7c4a-412d-82ac-fc3c97dc8cb1",
+          "name": "مونتاج الريل"
+        },
+        {
+          "id": "tst_e7007277-234d-4846-bdf9-38ea675f7324",
+          "name": "النشر"
+        }
+      ],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "tpl_c3730c92-d3a4-4a1a-9740-9d7f75122523",
+      "name": "ريلز من درس",
+      "description": "استخراج مقطع مؤثر من درس مصوّر ثم مونتاجه ونشره.",
+      "stages": [
+        {
+          "id": "tst_31111bd1-f801-4f05-999b-f05bf91be638",
+          "name": "اختيار الفكرة والمقطع"
+        },
+        {
+          "id": "tst_cdb05c16-e2d2-45ba-b30e-3dfd929f0c1d",
+          "name": "مونتاج المقطع"
+        },
+        {
+          "id": "tst_d5fc6f8b-92d5-48bf-a78c-a731c520e1b3",
+          "name": "النشر"
+        }
+      ],
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "tpl_9f532c0d-9fd5-434d-ac55-ed1f0a12563b",
+      "name": "قالب اختبار",
+      "description": "",
+      "stages": [
+        {
+          "id": "tst_c4686220-408e-4bc0-bb8d-d4a084ff33db",
+          "name": "المرحلة الأولى"
+        },
+        {
+          "id": "tst_debffefd-1d17-436e-9e96-3169ad4c03e1",
+          "name": "المرحلة الثانية"
+        }
+      ],
+      "createdAt": "2026-10-27T15:42:10.270Z"
+    }
+  ],
+  "groups": [
+    {
+      "id": "grp_0672042b-1fba-494a-a3a6-3f33789481c1",
+      "name": "الخطب",
+      "templateId": "tpl_5d3a3b9a-f827-45ba-be98-5498b5a1291d",
+      "color": "#ff9f0a",
+      "description": "إنتاج وتوثيق خطب الجمعة.",
+      "stageAssignees": {},
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "grp_d240b67f-ae29-439e-8e5a-380cfa4545f3",
+      "name": "دروس الفجر",
+      "templateId": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "color": "#0a84ff",
+      "description": "تسجيل ونشر دروس الفجر.",
+      "stageAssignees": {},
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "grp_802d1fbe-c96f-4a4a-b1df-cad95f14125c",
+      "name": "الريلز",
+      "templateId": "tpl_d4a62a94-d10d-4ed2-9a96-0caa71205a83",
+      "color": "#6c63ff",
+      "description": "إنتاج مقاطع ريلز قصيرة من الأفكار الجديدة.",
+      "stageAssignees": {},
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "grp_c7515059-d09c-41d4-9ad6-7ab9a0674e57",
+      "name": "ريلز من الدروس",
+      "templateId": "tpl_c3730c92-d3a4-4a1a-9740-9d7f75122523",
+      "color": "#30b85a",
+      "description": "مقاطع مستخرجة من الدروس المصورة.",
+      "stageAssignees": {},
+      "createdAt": "2026-10-27T15:41:58.558Z"
+    },
+    {
+      "id": "grp_189c1920-d307-4ab4-94a7-52643fda8eb2",
+      "name": "مجموعة اختبار",
+      "templateId": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "color": "#30b85a",
+      "description": "",
+      "stageAssignees": {},
+      "createdAt": "2026-10-27T15:42:08.805Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_6c644d6f-0d6d-4b58-a676-6cbb1ba92a7e",
+      "title": "مهمة اختبار معدلة",
+      "groupId": "grp_d240b67f-ae29-439e-8e5a-380cfa4545f3",
+      "templateId": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "stages": [
+        {
+          "id": "stg_8a235c73-0d4e-49d0-b964-3d49eeef1b7d",
+          "templateStageId": "tst_112394d9-5df3-4eb4-9cce-de0d197174d4",
+          "name": "تصوير الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_7104b943-3a81-4b92-96fd-55b26cc8fca9",
+          "templateStageId": "tst_d55c412c-9ba8-4794-80ae-024398e2f664",
+          "name": "تفريغ الفيديو",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_4d39578f-0e13-4edd-ad80-6395507bdb9c",
+          "templateStageId": "tst_e5588fa3-449e-4470-9d52-7993329263c6",
+          "name": "مونتاج الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_8fcea423-35bc-46ed-bc4f-85893fd87571",
+          "templateStageId": "tst_8d07014f-6ced-477a-b035-c1785925c356",
+          "name": "نشر الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": null,
+      "dueDate": "2026-10-28",
+      "priority": "normal",
+      "description": "",
+      "createdAt": "2026-10-27T15:42:04.465Z",
+      "updatedAt": "2026-10-27T15:42:06.371Z",
+      "isDemo": false
+    },
+    {
+      "id": "task_004126f4-5394-4f29-ae30-f65c1391e0a1",
+      "title": "خطبة الجمعة: بر الوالدين",
+      "groupId": "grp_0672042b-1fba-494a-a3a6-3f33789481c1",
+      "templateId": "tpl_5d3a3b9a-f827-45ba-be98-5498b5a1291d",
+      "stages": [
+        {
+          "id": "stg_34e2a8a2-eedc-4ead-b67b-56fa5500424d",
+          "templateStageId": "tst_0f4edd50-0c11-41fc-aa70-199316e15d45",
+          "name": "تصوير الخطبة",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-18T06:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_2052478a-5b56-4092-9b86-46de7e5143ad",
+          "templateStageId": "tst_122dffb7-59ab-4402-81bd-c00dc31410c6",
+          "name": "تفريغ الخطبة",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-19T13:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": "تم رفع المادة على جهاز المونتاج."
+        },
+        {
+          "id": "stg_a066a5e1-8480-4ec0-946d-d6f1c993b3ee",
+          "templateStageId": "tst_b18e2234-fb2e-45b1-88dd-3cc102e55e67",
+          "name": "مونتاج الخطبة",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-21T08:29:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_a74cd2d6-c986-4b67-a717-e8765a256e22",
+          "templateStageId": "tst_2a5f72bb-c797-44de-8d53-a6c9a8a15cd3",
+          "name": "نشر الخطبة",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-22T10:53:58.559Z",
+          "defaultAssigneeId": null,
+          "note": "تمت الجدولة والنشر."
+        }
+      ],
+      "assigneeId": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+      "dueDate": "2026-10-23",
+      "priority": "high",
+      "description": "إنتاج خطبة الجمعة مع المقدمة والغلاف ثم نشرها على منصات المسجد.",
+      "createdAt": "2026-10-17T10:53:58.559Z",
+      "updatedAt": "2026-10-22T10:53:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_e5c9ba65-63b2-40da-b490-ec8e8566df3e",
+      "title": "درس الفجر: تفسير سورة الفاتحة",
+      "groupId": "grp_d240b67f-ae29-439e-8e5a-380cfa4545f3",
+      "templateId": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "stages": [
+        {
+          "id": "stg_5d5c152f-b1df-46f2-a80a-36d5f9afd189",
+          "templateStageId": "tst_112394d9-5df3-4eb4-9cce-de0d197174d4",
+          "name": "تصوير الدرس",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-20T01:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_a865a705-c58c-4fc8-9f85-b388461b7dd4",
+          "templateStageId": "tst_d55c412c-9ba8-4794-80ae-024398e2f664",
+          "name": "تفريغ الفيديو",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-20T20:29:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_06e83a24-b812-4d33-8a30-00e65cc9a4fd",
+          "templateStageId": "tst_e5588fa3-449e-4470-9d52-7993329263c6",
+          "name": "مونتاج الدرس",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-23T01:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_bc3aa199-1902-4e4c-b062-7ef8b34b949e",
+          "templateStageId": "tst_8d07014f-6ced-477a-b035-c1785925c356",
+          "name": "نشر الدرس",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-24T06:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+      "dueDate": "2026-10-25",
+      "priority": "normal",
+      "description": "درس الفجر الأسبوعي، مع إعداد مقطع تشويقي قصير.",
+      "createdAt": "2026-10-19T06:05:58.559Z",
+      "updatedAt": "2026-10-24T06:05:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_3e81d1d8-80b4-4f39-aac3-101d6ecdf85c",
+      "title": "ريلز: آداب المسجد",
+      "groupId": "grp_802d1fbe-c96f-4a4a-b1df-cad95f14125c",
+      "templateId": "tpl_d4a62a94-d10d-4ed2-9a96-0caa71205a83",
+      "stages": [
+        {
+          "id": "stg_13d6978e-3086-4c21-9f10-9e934d2a9206",
+          "templateStageId": "tst_a5c38976-ef6d-4810-b890-753f3dc39067",
+          "name": "اختيار الفكرة",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-20T22:53:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_ae20fe91-417e-4fde-ad13-e1972bc0c1e7",
+          "templateStageId": "tst_f08c0bd4-9cd7-49fd-8cdc-71315ed42a4a",
+          "name": "كتابة السكريبت",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-21T10:53:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_fb91e539-6aae-4381-8ce2-c2ee23203653",
+          "templateStageId": "tst_ae2bf341-8256-4893-8797-17ac56a41121",
+          "name": "تصوير الريل",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-22T18:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_cbe6bd7a-2c51-448a-b648-2e17fa462572",
+          "templateStageId": "tst_50e418e9-57bc-4dbb-b800-fd3a55954d99",
+          "name": "تفريغ الريل",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-23T08:29:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_00f793f0-5666-4854-a432-8050604a23e6",
+          "templateStageId": "tst_a4aae2d3-7c4a-412d-82ac-fc3c97dc8cb1",
+          "name": "مونتاج الريل",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-27T09:41:58.559Z",
+          "defaultAssigneeId": null,
+          "note": "انسخ المونتاج جاهز للمراجعة النهائية."
+        },
+        {
+          "id": "stg_f3ac7e3c-faf7-4a7f-a3b0-350c782ee72d",
+          "templateStageId": "tst_e7007277-234d-4846-bdf9-38ea675f7324",
+          "name": "النشر",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-27T15:42:03.577Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+      "dueDate": "2026-10-28",
+      "priority": "high",
+      "description": "ريل قصير يعرض آداب دخول المسجد بأسلوب بصري هادئ.",
+      "createdAt": "2026-10-20T03:41:58.559Z",
+      "updatedAt": "2026-10-27T15:42:03.577Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_b7bcda59-161f-47df-bb1b-34dfeb6c54c6",
+      "title": "ريلز من درس: لحظة مؤثرة من تفسير الفاتحة",
+      "groupId": "grp_c7515059-d09c-41d4-9ad6-7ab9a0674e57",
+      "templateId": "tpl_c3730c92-d3a4-4a1a-9740-9d7f75122523",
+      "stages": [
+        {
+          "id": "stg_11fe7486-c5f1-4c58-b51c-ee2d6ee3c173",
+          "templateStageId": "tst_31111bd1-f801-4f05-999b-f05bf91be638",
+          "name": "اختيار الفكرة والمقطع",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-23T06:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": "المقطع من الدقيقة 18:40."
+        },
+        {
+          "id": "stg_212343b9-9d41-44bf-9d60-b0e53591b4b1",
+          "templateStageId": "tst_cdb05c16-e2d2-45ba-b30e-3dfd929f0c1d",
+          "name": "مونتاج المقطع",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-25T01:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_883faf2b-20ed-4589-8cd1-b92a94434ba1",
+          "templateStageId": "tst_d5fc6f8b-92d5-48bf-a78c-a731c520e1b3",
+          "name": "النشر",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+      "dueDate": "2026-10-27",
+      "priority": "high",
+      "description": "اختيار مقطع مؤثر من درس تفسير الفاتحة وإخراجه كريل مستقل.",
+      "createdAt": "2026-10-22T08:29:58.559Z",
+      "updatedAt": "2026-10-25T01:17:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_a892ccce-dbe0-4c56-8f93-2ef2ea8e3fb2",
+      "title": "درس الفجر: أخلاق النبي ﷺ",
+      "groupId": "grp_d240b67f-ae29-439e-8e5a-380cfa4545f3",
+      "templateId": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "stages": [
+        {
+          "id": "stg_1d4488b1-056e-4c4a-adf5-bf29cf266d66",
+          "templateStageId": "tst_112394d9-5df3-4eb4-9cce-de0d197174d4",
+          "name": "تصوير الدرس",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-22T01:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_fbd2d5ac-81fa-4210-ac78-c7391fd0eafb",
+          "templateStageId": "tst_d55c412c-9ba8-4794-80ae-024398e2f664",
+          "name": "تفريغ الفيديو",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-26T06:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_00497472-dc08-4ec5-9d1a-1e03e31065d5",
+          "templateStageId": "tst_e5588fa3-449e-4470-9d52-7993329263c6",
+          "name": "مونتاج الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_4851df2c-c9de-46b8-bd83-03dd3af009d4",
+          "templateStageId": "tst_8d07014f-6ced-477a-b035-c1785925c356",
+          "name": "نشر الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+      "dueDate": "2026-10-26",
+      "priority": "urgent",
+      "description": "إنتاج درس الفجر ومراجعة الصوت قبل المونتاج.",
+      "createdAt": "2026-10-21T06:05:58.559Z",
+      "updatedAt": "2026-10-26T06:05:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_22b851cf-9453-4dd9-a3e3-75eb65db2a87",
+      "title": "خطبة الجمعة: الصبر عند البلاء",
+      "groupId": "grp_0672042b-1fba-494a-a3a6-3f33789481c1",
+      "templateId": "tpl_5d3a3b9a-f827-45ba-be98-5498b5a1291d",
+      "stages": [
+        {
+          "id": "stg_d2de63c3-5222-42f9-9a7f-d37b1ec3046e",
+          "templateStageId": "tst_0f4edd50-0c11-41fc-aa70-199316e15d45",
+          "name": "تصوير الخطبة",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-24T13:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_51304bbe-25ad-4ada-a056-d4f5f3862ea2",
+          "templateStageId": "tst_122dffb7-59ab-4402-81bd-c00dc31410c6",
+          "name": "تفريغ الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_6e01c69a-1c57-4dd2-90f5-9eefdab7645e",
+          "templateStageId": "tst_b18e2234-fb2e-45b1-88dd-3cc102e55e67",
+          "name": "مونتاج الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_c2c53594-5f7c-4088-910e-35a20d3183ae",
+          "templateStageId": "tst_2a5f72bb-c797-44de-8d53-a6c9a8a15cd3",
+          "name": "نشر الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+      "dueDate": "2026-10-30",
+      "priority": "normal",
+      "description": "خطبة الجمعة القادمة، تحتاج مقدمة قصيرة وخاتمة موحدة.",
+      "createdAt": "2026-10-23T10:53:58.559Z",
+      "updatedAt": "2026-10-24T13:17:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_b0282922-ffd1-4beb-bd37-26366ed9e3f3",
+      "title": "ريلز: ذكر الله في السوق",
+      "groupId": "grp_802d1fbe-c96f-4a4a-b1df-cad95f14125c",
+      "templateId": "tpl_d4a62a94-d10d-4ed2-9a96-0caa71205a83",
+      "stages": [
+        {
+          "id": "stg_3ae27de9-3585-40f1-abb5-cb81e4552290",
+          "templateStageId": "tst_a5c38976-ef6d-4810-b890-753f3dc39067",
+          "name": "اختيار الفكرة",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-25T22:53:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_74690cb9-ecf2-465f-95b9-0426809f3a9c",
+          "templateStageId": "tst_f08c0bd4-9cd7-49fd-8cdc-71315ed42a4a",
+          "name": "كتابة السكريبت",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-27T01:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_27f53743-d923-4c7d-8581-f65620a01ae3",
+          "templateStageId": "tst_ae2bf341-8256-4893-8797-17ac56a41121",
+          "name": "تصوير الريل",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_72f03350-07f8-4792-9db2-521d3bd417de",
+          "templateStageId": "tst_50e418e9-57bc-4dbb-b800-fd3a55954d99",
+          "name": "تفريغ الريل",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_15738616-fde4-4451-b139-4aa81a3dec1c",
+          "templateStageId": "tst_a4aae2d3-7c4a-412d-82ac-fc3c97dc8cb1",
+          "name": "مونتاج الريل",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_e6a80a4a-6b14-4ded-85e9-6677c60b9be7",
+          "templateStageId": "tst_e7007277-234d-4846-bdf9-38ea675f7324",
+          "name": "النشر",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+      "dueDate": "2026-10-31",
+      "priority": "normal",
+      "description": "فكرة ريل قصير عن الذكر في أماكن الانشغال.",
+      "createdAt": "2026-10-25T01:17:58.559Z",
+      "updatedAt": "2026-10-27T01:17:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_46cdb7b8-daa3-4c41-918b-cb52c5782682",
+      "title": "درس الفجر: أحكام الطهارة",
+      "groupId": "grp_d240b67f-ae29-439e-8e5a-380cfa4545f3",
+      "templateId": "tpl_03b639be-c633-4807-a7bc-9aae2d62df1d",
+      "stages": [
+        {
+          "id": "stg_a7d85744-83cd-43ad-8b00-4c983112483e",
+          "templateStageId": "tst_112394d9-5df3-4eb4-9cce-de0d197174d4",
+          "name": "تصوير الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_2637307c-eebc-4fa8-9986-f7132157ea91",
+          "templateStageId": "tst_d55c412c-9ba8-4794-80ae-024398e2f664",
+          "name": "تفريغ الفيديو",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_8e5063ee-3718-48f8-bc5e-20309e0a1c60",
+          "templateStageId": "tst_e5588fa3-449e-4470-9d52-7993329263c6",
+          "name": "مونتاج الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_6a805128-69fa-4d82-a5c6-3089d0b281d4",
+          "templateStageId": "tst_8d07014f-6ced-477a-b035-c1785925c356",
+          "name": "نشر الدرس",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+      "dueDate": "2026-10-29",
+      "priority": "normal",
+      "description": "تسجيل درس الفجر وتجهيزه للنشر خلال يومين.",
+      "createdAt": "2026-10-26T06:05:58.559Z",
+      "updatedAt": "2026-10-26T06:05:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_952a2a75-47b2-4741-9743-e18c4ff979ff",
+      "title": "خطبة الجمعة: فضل العلم",
+      "groupId": "grp_0672042b-1fba-494a-a3a6-3f33789481c1",
+      "templateId": "tpl_5d3a3b9a-f827-45ba-be98-5498b5a1291d",
+      "stages": [
+        {
+          "id": "stg_a15899af-3475-46d8-9e44-5d96e3f99c09",
+          "templateStageId": "tst_0f4edd50-0c11-41fc-aa70-199316e15d45",
+          "name": "تصوير الخطبة",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-15T01:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_0ef60e9b-867e-47f6-9e96-1fa2bb2cf5e3",
+          "templateStageId": "tst_122dffb7-59ab-4402-81bd-c00dc31410c6",
+          "name": "تفريغ الخطبة",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-15T22:53:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_549953b1-393c-40bf-b97c-0e60dd322d53",
+          "templateStageId": "tst_b18e2234-fb2e-45b1-88dd-3cc102e55e67",
+          "name": "مونتاج الخطبة",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-17T13:17:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_abb95b7b-22f0-4cbe-b1a4-94b62a23990c",
+          "templateStageId": "tst_2a5f72bb-c797-44de-8d53-a6c9a8a15cd3",
+          "name": "نشر الخطبة",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-18T18:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+      "dueDate": "2026-10-19",
+      "priority": "normal",
+      "description": "خطبة مكتملة ونُشرت على قناة المسجد.",
+      "createdAt": "2026-10-14T06:05:58.559Z",
+      "updatedAt": "2026-10-18T18:05:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_bba4f74b-5234-410d-b68d-e9217c106285",
+      "title": "ريلز: بر الوالدين",
+      "groupId": "grp_802d1fbe-c96f-4a4a-b1df-cad95f14125c",
+      "templateId": "tpl_d4a62a94-d10d-4ed2-9a96-0caa71205a83",
+      "stages": [
+        {
+          "id": "stg_7da88340-c05a-4fd1-8647-579abdfcaac8",
+          "templateStageId": "tst_a5c38976-ef6d-4810-b890-753f3dc39067",
+          "name": "اختيار الفكرة",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-17T06:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_c4d48dfe-05fc-4172-b2e4-fc44cae78a19",
+          "templateStageId": "tst_f08c0bd4-9cd7-49fd-8cdc-71315ed42a4a",
+          "name": "كتابة السكريبت",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-17T20:29:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_6afe11dc-0819-4d77-b32a-72fe456d8742",
+          "templateStageId": "tst_ae2bf341-8256-4893-8797-17ac56a41121",
+          "name": "تصوير الريل",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-19T03:41:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_6e229f18-848c-4225-abf5-7af8626fb044",
+          "templateStageId": "tst_50e418e9-57bc-4dbb-b800-fd3a55954d99",
+          "name": "تفريغ الريل",
+          "done": true,
+          "completedBy": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+          "completedByName": "أحمد",
+          "completedAt": "2026-10-19T18:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_fe96bca5-8895-407e-8f2f-036cbf9fec6e",
+          "templateStageId": "tst_a4aae2d3-7c4a-412d-82ac-fc3c97dc8cb1",
+          "name": "مونتاج الريل",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-21T06:05:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_75033327-c551-46ab-8b3e-66c3dc0f5d8a",
+          "templateStageId": "tst_e7007277-234d-4846-bdf9-38ea675f7324",
+          "name": "النشر",
+          "done": true,
+          "completedBy": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+          "completedByName": "سارة",
+          "completedAt": "2026-10-22T08:29:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+      "dueDate": "2026-10-22",
+      "priority": "normal",
+      "description": "ريل قصير بمناسبة حملة بر الوالدين.",
+      "createdAt": "2026-10-16T08:29:58.559Z",
+      "updatedAt": "2026-10-22T08:29:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_87e4ad01-5789-49c0-9955-16f3fbf99c69",
+      "title": "ريلز من درس: مقطع من خطبة الصبر",
+      "groupId": "grp_c7515059-d09c-41d4-9ad6-7ab9a0674e57",
+      "templateId": "tpl_c3730c92-d3a4-4a1a-9740-9d7f75122523",
+      "stages": [
+        {
+          "id": "stg_43befe5c-7b61-495b-926d-b69987cfe096",
+          "templateStageId": "tst_31111bd1-f801-4f05-999b-f05bf91be638",
+          "name": "اختيار الفكرة والمقطع",
+          "done": true,
+          "completedBy": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+          "completedByName": "عبدالله",
+          "completedAt": "2026-10-25T08:29:58.559Z",
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_4654a5f3-0700-497e-b69f-d583d2205a01",
+          "templateStageId": "tst_cdb05c16-e2d2-45ba-b30e-3dfd929f0c1d",
+          "name": "مونتاج المقطع",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_9f612a45-8a03-4bae-a814-6e940f416c4d",
+          "templateStageId": "tst_d5fc6f8b-92d5-48bf-a78c-a731c520e1b3",
+          "name": "النشر",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_fa639052-7db5-4cfb-a7d2-92a3b843323d",
+      "dueDate": "2026-10-28",
+      "priority": "normal",
+      "description": "مقطع قصير من خطبة الصبر مع ترجمة نصية.",
+      "createdAt": "2026-10-24T10:53:58.559Z",
+      "updatedAt": "2026-10-25T08:29:58.559Z",
+      "isDemo": true
+    },
+    {
+      "id": "task_4a26d81c-54e2-4f2f-b75a-fdd1bb0fe9f3",
+      "title": "خطبة الجمعة: حسن الخلق",
+      "groupId": "grp_0672042b-1fba-494a-a3a6-3f33789481c1",
+      "templateId": "tpl_5d3a3b9a-f827-45ba-be98-5498b5a1291d",
+      "stages": [
+        {
+          "id": "stg_fee2980b-fa86-4d60-88d8-10493973c6a1",
+          "templateStageId": "tst_0f4edd50-0c11-41fc-aa70-199316e15d45",
+          "name": "تصوير الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_08676877-290c-4e52-b715-c1d02e47bd9e",
+          "templateStageId": "tst_122dffb7-59ab-4402-81bd-c00dc31410c6",
+          "name": "تفريغ الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_79a77d85-4d59-4a8f-a9d2-74c6d6efd038",
+          "templateStageId": "tst_b18e2234-fb2e-45b1-88dd-3cc102e55e67",
+          "name": "مونتاج الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        },
+        {
+          "id": "stg_f148c3ff-52c2-4883-81a3-5f2be9fb6f12",
+          "templateStageId": "tst_2a5f72bb-c797-44de-8d53-a6c9a8a15cd3",
+          "name": "نشر الخطبة",
+          "done": false,
+          "completedBy": null,
+          "completedByName": "",
+          "completedAt": null,
+          "defaultAssigneeId": null,
+          "note": ""
+        }
+      ],
+      "assigneeId": "usr_848595d6-d27e-4007-a36b-5e1112f02069",
+      "dueDate": "2026-11-02",
+      "priority": "normal",
+      "description": "تجهيز خطبة الجمعة القادمة مع تصميم الغلاف.",
+      "createdAt": "2026-10-27T08:29:58.559Z",
+      "updatedAt": "2026-10-27T08:29:58.559Z",
+      "isDemo": true
+    }
+  ],
+  "activeUserId": "usr_eef2d835-9921-4700-9394-7dbe6efd6f6f",
+  "meta": {
+    "app": "mosque-media-office",
+    "version": 1,
+    "exportedAt": "2026-10-27T15:42:19.386Z"
+  }
+}

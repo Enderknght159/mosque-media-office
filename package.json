@@ -1,0 +1,24 @@
+{
+  "name": "mosque-media-office",
+  "version": "1.0.0",
+  "description": "نظام متابعة إنجازات المكتب الإعلامي في المسجد",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/ui-test.js",
+    "build:exe": "node scripts/build-exe.js"
+  },
+  "keywords": [
+    "mosque",
+    "media",
+    "tasks",
+    "workflow"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "playwright-core": "^1.64.1",
+    "postject": "^1.0.0-alpha.6"
+  }
+}
