@@ -216,6 +216,18 @@
 .automation-chart-total { display: flex; align-items: baseline; gap: 4px; flex: 0 0 auto; }
 .automation-chart-total strong { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .automation-chart-total span { font-size: 9px; color: var(--text-3); }
+.automation-chart-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+  color: var(--text-2);
+  font-size: 10.5px;
+  line-height: 1.7;
+}
 
 /* ---------- البرومتات ---------- */
 .automation-prompts { margin-bottom: 8px; }

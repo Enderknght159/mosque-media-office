@@ -86,7 +86,12 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     }, { dir: repoDir });
     check('Repo.sync ok', syncResult?.ok === true, JSON.stringify(syncResult).slice(0, 300));
 
-    const ids = await page.evaluate(() => window.__testIds);
+    const ids = await page.evaluate(() => {
+      const data = Data.get();
+      const task = data.tasks.find((item) => item.title === 'مهمة أتمتة') || data.tasks[0];
+      const group = data.groups.find((item) => item.name === 'الاختبار') || data.groups[0];
+      return { groupId: group?.id || '', taskId: task?.id || '' };
+    });
     const taskFolder = await page.evaluate((taskId) => Data.findTask(taskId)?.folder || '', ids.taskId);
     check('task folder recorded in data', Boolean(taskFolder), taskFolder);
     check('task folder exists', fs.existsSync(path.join(repoDir, taskFolder)), path.join(repoDir, taskFolder));
@@ -152,10 +157,11 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     check('no page errors', uiErrors.length === 0, uiErrors.slice(0, 3).join(' | '));
   } finally {
     await app.close();
-    if (failures === 0) {
+    await wait(800);
+    try {
       fs.rmSync(tempRoot, { recursive: true, force: true });
-    } else {
-      process.stdout.write(`\nTemp folder kept for inspection: ${tempRoot}\n`);
+    } catch (error) {
+      process.stdout.write(`\nCould not remove temp folder (files still locked): ${tempRoot}\n`);
     }
   }
 

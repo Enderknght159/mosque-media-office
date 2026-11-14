@@ -16,6 +16,8 @@ files:
   - package.json
 
 asar: true
+electronDist: node_modules/electron/dist
+npmRebuild: false
 
 win:
   target:

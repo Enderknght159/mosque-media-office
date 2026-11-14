@@ -272,7 +272,7 @@ const AutomationUI = (() => {
     const desktop = isDesktop();
     const series = Data.automationDailySeries(30, 'cost');
     const seriesTotal = series.reduce((sum, point) => sum + (Number(point.value) || 0), 0);
-    const hasChartData = series.some((point) => (Number(point.value) || 0) > 0 || (Number(point.runs) || 0) > 0);
+    const hasChartData = seriesTotal > 0;
     const chartPoints = series.map((point) => ({
       label: Utils.fmtDayMonth(point.label),
       value: Number(point.value) || 0
@@ -396,9 +396,21 @@ const AutomationUI = (() => {
             height: 170,
             color: '#ff9f0a',
             ariaLabel: 'تكلفة التشغيلات خلال آخر 30 يومًا',
-            emptyText: 'لا توجد تكلفة مسجّلة'
+            emptyText: 'لا توجد تكلفة مسجّلة',
+            valueFormat: (value) => formatCost(value),
+            minStep: 0.0001
           })}
-        </section>` : ''}
+        </section>` : (stats.total ? `
+        <section class="card automation-chart-card">
+          <div class="card-head">
+            <div>
+              <h2>تكلفة التشغيلات</h2>
+              <p>لم تُسجّل تكلفة في آخر 30 يومًا.</p>
+            </div>
+            <div class="automation-chart-total"><strong>$0</strong><span>الإجمالي</span></div>
+          </div>
+          <p class="automation-chart-note">${Icons.svg('info', 14)} الموديل المستخدم لا يُرجع تكلفة (غالبًا موديل مجاني)، لذلك لا يوجد رسم بياني للمصروف. عدد التشغيلات محسوب في الإحصائيات أعلاه.</p>
+        </section>` : '')}
       <section class="automation-prompts">
         <div class="section-head">
           <div>

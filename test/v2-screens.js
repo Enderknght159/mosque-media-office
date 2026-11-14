@@ -174,6 +174,17 @@ async function waitForServer() {
     await page.waitForTimeout(600);
     await page.screenshot({ path: path.join(shots, '23-dashboard-with-automation.png'), fullPage: true });
 
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(500);
+    const navLinks = await page.locator('.bottom-nav-link').count();
+    if (navLinks < 6) errors.push(`bottom nav has ${navLinks} items`);
+    const navOverflow = await page.evaluate(() => {
+      const nav = document.querySelector('.bottom-nav');
+      return nav ? nav.scrollWidth - nav.clientWidth : 0;
+    });
+    if (navOverflow > 2) errors.push(`bottom nav overflows by ${navOverflow}px`);
+    await page.screenshot({ path: path.join(shots, '25-mobile-dashboard.png') });
+
     if (errors.length) {
       console.error(errors.join('\n'));
       process.exitCode = 1;
