@@ -1,1 +1,11 @@
-dist/MosqueMediaOffice.exe 
+node_modules/
+release/
+dist/
+build/embedded-server.cjs
+build/sea-config.json
+build/sea-prep.blob
+test/downloads/
+desktop.ini
+Thumbs.db
+.DS_Store
+*.log

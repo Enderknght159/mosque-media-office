@@ -1,0 +1,521 @@
+/* =============================================================
+   تبويب الأتمتة — كل الأصناف الجديدة تبدأ بـ automation-
+   يعتمد على متغيرات الثيم في css/base.css فقط.
+   ============================================================= */
+
+/* ---------- رأس الصفحة ---------- */
+.automation-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 31px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--text-2);
+  font-size: 9.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+.automation-mode-chip .icon { color: var(--accent); }
+
+.automation-desktop-banner { align-items: center; }
+.automation-desktop-banner strong { color: var(--text); font-weight: 650; }
+
+/* ---------- شارة حالة التشغيل ---------- */
+.automation-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--automation-color) 12%, transparent);
+  color: var(--automation-color);
+  font-size: 9px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.automation-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+@keyframes automationPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.automation-status.is-running i { animation: automationPulse 1.5s ease-in-out infinite; }
+
+/* ---------- المهام الجارية الآن ---------- */
+.automation-active { padding: 18px; margin-bottom: 15px; }
+.automation-active .card-head h2,
+.automation-history .card-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.automation-active .card-head h2 .icon,
+.automation-history .card-head h2 .icon { color: var(--accent); }
+.automation-count {
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.automation-runs { display: flex; flex-direction: column; gap: 10px; }
+
+.automation-run {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.automation-run.is-running {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: linear-gradient(120deg, var(--accent-soft), var(--surface-2) 62%);
+}
+.automation-run.is-queued { border-style: dashed; border-color: var(--border-strong); }
+
+.automation-run-head { display: flex; align-items: flex-start; gap: 9px; }
+.automation-run-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--surface-solid);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.automation-run-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.automation-task-link {
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.automation-task-link:hover { color: var(--accent); }
+.automation-run-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-size: 8.5px;
+  color: var(--text-3);
+  min-width: 0;
+}
+.automation-run-meta i { font-style: normal; opacity: 0.6; }
+.automation-run-meta code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8px;
+  color: var(--text-2);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automation-run-phase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 9.5px;
+  color: var(--text-2);
+}
+.automation-phase { font-weight: 600; color: var(--text-2); }
+.automation-eta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.automation-run.is-queued .automation-eta { color: var(--text-3); }
+
+.automation-run-progress { display: flex; align-items: center; gap: 9px; }
+.automation-run-progress .progress { flex: 1; }
+.automation-percent {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 650;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.automation-run-stats {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex-wrap: wrap;
+  font-size: 8.5px;
+  color: var(--text-3);
+}
+.automation-run-stats span { display: inline-flex; align-items: center; gap: 4px; }
+.automation-run-stats .icon { color: var(--text-3); }
+
+.automation-run-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- سجل التشغيلات ---------- */
+.automation-history { padding: 18px; margin-bottom: 15px; }
+.automation-history .card-head { flex-wrap: wrap; }
+.automation-history-tabs { margin-bottom: 0; flex-wrap: wrap; justify-content: flex-end; }
+.automation-history-table td:first-child { font-weight: 550; }
+.automation-history-table .automation-task-link { font-size: 9.5px; font-weight: 600; max-width: 210px; }
+.automation-history-table .automation-status { font-size: 8px; }
+.automation-prompt-cell {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2) !important;
+}
+.automation-model-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8px !important;
+  color: var(--text-3) !important;
+}
+
+/* ---------- مخطط التكلفة ---------- */
+.automation-chart-card { padding: 18px; margin-bottom: 15px; }
+.automation-chart-card .line-chart { min-height: 0; }
+.automation-chart-total { display: flex; align-items: baseline; gap: 4px; flex: 0 0 auto; }
+.automation-chart-total strong { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.automation-chart-total span { font-size: 9px; color: var(--text-3); }
+
+/* ---------- البرومتات ---------- */
+.automation-prompts { margin-bottom: 8px; }
+.automation-prompts .section-head { margin-bottom: 11px; }
+.automation-prompts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+  gap: 12px;
+}
+.automation-prompt {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  min-height: 218px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.automation-prompt:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+.automation-prompt-head { display: flex; align-items: flex-start; gap: 9px; }
+.automation-prompt-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.automation-prompt-title { min-width: 0; display: flex; flex-direction: column; line-height: 1.45; }
+.automation-prompt-title strong {
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.automation-prompt-title span { font-size: 8px; color: var(--text-3); }
+.automation-prompt-desc {
+  margin-top: 8px;
+  font-size: 9.5px;
+  line-height: 1.7;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 32px;
+}
+.automation-prompt-desc.is-empty { color: var(--text-3); }
+.automation-prompt-excerpt {
+  margin: 9px 0 11px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow: hidden;
+  max-height: 70px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.automation-prompt-actions {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.automation-add-prompt { min-height: 218px; }
+
+/* ---------- نافذة بدء الأتمتة ---------- */
+.automation-start-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.automation-start-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.automation-start-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.automation-start-body .chip { margin-bottom: 1px; }
+.automation-start-body strong { font-size: 12px; font-weight: 650; line-height: 1.55; }
+.automation-start-body > span:last-child { font-size: 8.5px; color: var(--text-3); line-height: 1.6; }
+
+.automation-prompt-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 1.9;
+}
+.field textarea.automation-prompt-text { min-height: 150px; }
+
+.automation-output-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+  background: var(--accent-soft);
+  color: var(--text-2);
+  font-size: 9px;
+  line-height: 1.8;
+}
+.automation-output-note .icon { color: var(--accent); flex: 0 0 auto; margin-top: 2px; }
+.automation-output-note code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-solid);
+  color: var(--text);
+  font-size: 8.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.automation-model-state { flex-wrap: wrap; align-items: center; gap: 5px; }
+.automation-model-state code { font-size: 8.5px; }
+.automation-model-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--orange);
+}
+
+.automation-starter-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.automation-starter-box > div { flex: 1; min-width: 170px; }
+.automation-starter-box strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 650;
+}
+.automation-starter-box strong .icon { color: var(--purple); }
+.automation-starter-box p {
+  margin-top: 2px;
+  font-size: 8.5px;
+  line-height: 1.7;
+  color: var(--text-3);
+}
+
+/* ---------- تفاصيل التشغيل ---------- */
+.automation-job { display: flex; flex-direction: column; gap: 13px; }
+.automation-job-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.automation-job-head .chip code { font-size: 8px; }
+
+.automation-job-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.automation-job-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  min-width: 0;
+}
+.automation-job-meta-item > span { font-size: 8px; color: var(--text-3); }
+.automation-job-meta-item > strong {
+  font-size: 9.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.automation-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(102px, 1fr));
+  gap: 7px;
+}
+.automation-usage-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-solid);
+  min-width: 0;
+}
+.automation-usage-item > span { font-size: 8px; color: var(--text-3); }
+.automation-usage-item > strong {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.automation-usage-item.is-cost {
+  background: var(--orange-soft);
+  border-color: color-mix(in srgb, var(--orange) 22%, transparent);
+}
+.automation-usage-item.is-cost > strong { color: var(--orange); }
+
+.automation-job-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--red-soft);
+  color: var(--red);
+}
+.automation-job-error .icon { flex: 0 0 auto; margin-top: 2px; }
+.automation-job-error p { font-size: 10px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---------- منطقة السجل ---------- */
+.automation-log-wrap {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.automation-log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-solid);
+  font-size: 9px;
+  color: var(--text-2);
+}
+.automation-log-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 650;
+}
+.automation-log-head .icon { color: var(--text-3); }
+.automation-log {
+  margin: 0;
+  padding: 10px 12px;
+  min-height: 130px;
+  max-height: 260px;
+  overflow: auto;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  direction: ltr;
+  text-align: left;
+}
+.automation-log-lg { min-height: 250px; max-height: 46vh; }
+.automation-log.automation-log-empty { color: var(--text-3); font-style: normal; }
+
+[data-theme='dark'] .automation-log { background: var(--bg-soft); }
+
+/* ---------- استجابة الشاشات الصغيرة ---------- */
+@media (max-width: 900px) {
+  .automation-job-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .automation-run-actions .btn { flex: 1 1 auto; }
+  .automation-history .card-head { flex-direction: column; align-items: flex-start; }
+  .automation-history-tabs { justify-content: flex-start; }
+  .automation-chart-card .card-head { flex-wrap: wrap; }
+  .automation-job-meta { grid-template-columns: 1fr 1fr; }
+}

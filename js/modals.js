@@ -397,6 +397,8 @@ const Modals = (() => {
     const status = Data.taskStatus(task);
     const next = Data.nextStage(task);
     const due = Utils.dueMeta(task);
+    const activeJob = Data.activeAutomation(task.id);
+    const recentJobs = Data.automationsForTask(task.id).slice(0, 3);
     const createdAt = Utils.fmtDateTime(task.createdAt);
     const completedAt = Data.taskCompletedAt(task);
     const timeline = task.stages.map((stage, index) => {
@@ -446,6 +448,27 @@ const Modals = (() => {
             <div><strong>اكتملت المهمة بالكامل</strong><span>${completedAt ? `آخر إنجاز ${Utils.relativeTime(completedAt)}` : 'تم إنجاز كل المراحل.'}</span></div>
           </div>` : ''}
         ${due.overdue ? `<div class="overdue-banner">${Icons.svg('alert', 16)} المهمة متأخرة عن موعدها. ${Utils.esc(due.text)}.</div>` : ''}
+        <div class="task-action-row">
+          <button class="btn secondary sm" data-action="open-task-folder" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المهمة">${Icons.svg('folder-open', 15)} فتح المجلد</button>
+          <button class="btn secondary sm" data-action="open-task-output" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المخرجات">${Icons.svg('folder', 15)} فتح المخرجات</button>
+          <button class="btn secondary sm task-action-primary" data-action="start-automation" data-task-id="${task.id}" data-source="detail" title="${activeJob ? 'يوجد تشغيل جارٍ لهذه المهمة' : 'أتمتة المهمة بالذكاء الاصطناعي'}">${Icons.svg('robot', 15)} أتمتة بالذكاء الاصطناعي</button>
+        </div>
+        ${activeJob ? `
+          <div class="task-run-strip">
+            <span class="task-run-strip-icon">${Icons.svg('cpu', 17)}</span>
+            <div class="task-run-strip-body">
+              <div class="task-run-strip-head">
+                <strong>جارٍ التشغيل الآن</strong>
+                <span class="task-run-chip"><i class="task-run-dot"></i><b>${Views.jobPercent(activeJob)}%</b></span>
+              </div>
+              <p>${Utils.esc(activeJob.phase || 'في الانتظار')}${activeJob.model ? ` · ${Utils.esc(activeJob.model)}` : ''}</p>
+              ${Views.progressBar(Views.jobPercent(activeJob), '#0a84ff', 'sm')}
+            </div>
+            <div class="task-run-strip-actions">
+              <button class="btn ghost sm" data-action="open-job" data-job-id="${activeJob.id}">عرض التفاصيل</button>
+              <button class="btn ghost sm danger-text" data-action="cancel-automation" data-job-id="${activeJob.id}">${Icons.svg('stop', 14)} إلغاء</button>
+            </div>
+          </div>` : ''}
         <div class="task-meta-grid">
           <div class="meta-item"><span>المسؤول</span><strong class="meta-user">${Views.avatar(assignee, 'xs')} ${assignee ? Utils.esc(assignee.name) : 'غير مسند'}</strong></div>
           <div class="meta-item"><span>تاريخ الاستحقاق</span><strong>${task.dueDate ? Utils.fmtDate(task.dueDate) : 'بلا موعد'}</strong></div>
@@ -464,6 +487,21 @@ const Modals = (() => {
           <span>${Utils.formatNumber(task.stages.length)} مراحل</span>
         </div>
         <div class="timeline">${timeline}</div>
+        ${recentJobs.length ? `
+          <div class="detail-section-head">
+            <h3>${Icons.svg('robot', 18)} سجل الأتمتة</h3>
+            <span>${Utils.formatNumber(recentJobs.length)} من آخر التشغيلات</span>
+          </div>
+          <div class="task-auto-log">
+            ${recentJobs.map((job) => `
+              <div class="task-auto-row">
+                ${Views.automationStatusChip(job.status)}
+                <span class="task-auto-model" dir="ltr" title="${Utils.esc(job.model || 'بدون موديل')}">${Utils.esc(job.model || 'بدون موديل')}</span>
+                <span class="task-auto-cost">${Views.formatCost(job.usage?.costUSD)}</span>
+                <span class="task-auto-time">${Utils.relativeTime(job.startedAt)}</span>
+                <button class="icon-btn xs" data-action="open-job" data-job-id="${job.id}" title="تفاصيل التشغيل" aria-label="تفاصيل التشغيل">${Icons.svg('external', 14)}</button>
+              </div>`).join('')}
+          </div>` : ''}
       </div>`;
     const footer = `
       <div class="modal-footer-row">

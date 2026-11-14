@@ -496,3 +496,70 @@
 .logo-info strong { font-size: 11px; }
 .logo-info p { color: var(--text-3); font-size: 9px; line-height: 1.7; }
 .logo-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+
+/* ===== Group folder affordance (additive) ===== */
+.group-card-tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.group-folder-path {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  max-width: 100%;
+  font-size: 8px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.group-folder-path .icon { flex: 0 0 auto; color: var(--text-3); }
+
+/* ===== Tasks toolbar: repository folders action ===== */
+.toolbar-repo-btn { flex: 0 0 auto; }
+.toolbar-repo-btn .icon { color: var(--text-2); }
+
+/* ===== Reports: automation statistics section (additive) ===== */
+.rep-auto-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.rep-auto-head { align-items: center; }
+.rep-auto-head h3 { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.rep-auto-head h3 .icon { color: var(--purple); }
+.rep-auto-head > div > span { display: block; margin-top: 2px; font-size: 8.5px; color: var(--text-3); }
+.rep-auto-pill {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 8.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rep-auto-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rep-auto-summary .report-stat strong { font-size: 19px; }
+.rep-auto-chart { grid-template-columns: 1fr; }
+.rep-auto-model { direction: ltr; text-align: start; font-family: var(--font); }
+.rep-auto-task { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rep-auto-recent .status-chip { margin-inline-end: 0; }
+
+/* ===== Sidebar live badge + narrow bottom nav (6 items) ===== */
+.nav-badge-live { background: var(--green-soft); color: var(--green); }
+
+@media (max-width: 420px) {
+  .bottom-nav { padding-inline: 3px; gap: 0; }
+  .bottom-nav .bottom-nav-link { font-size: 6.8px; padding: 3px 1px; gap: 1px; }
+  .bottom-nav .bottom-nav-link .icon { width: 18px; height: 18px; }
+}
+
+@media (max-width: 560px) {
+  .rep-auto-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rep-auto-summary .report-stat strong { font-size: 17px; }
+  .rep-auto-head { flex-wrap: wrap; gap: 6px; }
+}
+
+@media (max-width: 720px) {
+  .toolbar-repo-btn { width: 36px; padding: 0; justify-content: center; }
+  .toolbar-repo-btn span { display: none; }
+}

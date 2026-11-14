@@ -1,4 +1,10 @@
 const App = (() => {
+  // Modules declared with top-level `const` are reachable as bare identifiers but
+  // are not properties of `window`. Expose them for cross-module access.
+  try { if (typeof Repo !== 'undefined') window.Repo = Repo; } catch (error) {}
+  try { if (typeof Opencode !== 'undefined') window.Opencode = Opencode; } catch (error) {}
+  try { if (typeof SettingsSections !== 'undefined') window.SettingsSections = SettingsSections; } catch (error) {}
+  try { if (typeof AutomationUI !== 'undefined') window.AutomationUI = AutomationUI; } catch (error) {}
   const appRoot = document.getElementById('app');
   const modalRoot = document.getElementById('modal-root');
   const toastRoot = document.getElementById('toast-root');
@@ -236,6 +242,10 @@ const App = (() => {
     state.route = getRoute();
     const meta = Views.pageMeta(state.route);
     appRoot.innerHTML = Views.render(state.route, data, state);
+    try {
+      if (state.route === 'settings') window.SettingsSections?.bind?.(appRoot);
+      window.AutomationUI?.bind?.(appRoot);
+    } catch (error) {}
     document.body.classList.remove('onboarding-active');
     document.title = `${meta.label} · ${data.settings.mosqueName}`;
     if (scrollTop) {
@@ -501,6 +511,7 @@ const App = (() => {
         location.hash = '#/dashboard';
       }
       render({ scrollTop: true, animate: true });
+      afterBoot();
       toast('تم إنشاء مساحة المكتب الإعلامي.', { type: 'success', icon: 'check-circle' });
     });
   }
@@ -795,6 +806,15 @@ const App = (() => {
       return;
     }
     if (!data) return;
+    for (const module of [window.Repo, window.SettingsSections, window.AutomationUI]) {
+      if (module && typeof module.handleAction === 'function') {
+        const handled = await module.handleAction(action, element);
+        if (handled) {
+          if (element.closest('.menu-pop')) closeMenus();
+          return;
+        }
+      }
+    }
     switch (action) {
       case 'open-drawer':
         openDrawer();
@@ -854,6 +874,18 @@ const App = (() => {
         break;
       case 'stage-cell':
         Modals.openStageCell(element.dataset.taskId, element.dataset.stageId);
+        break;
+      case 'open-task-folder':
+        window.Repo?.openTask?.(element.dataset.taskId);
+        break;
+      case 'open-task-output':
+        window.Repo?.openTaskOutput?.(element.dataset.taskId);
+        break;
+      case 'open-group-folder':
+        window.Repo?.openGroup?.(element.dataset.groupId);
+        break;
+      case 'sync-repo-folders':
+        window.Repo?.sync?.({ silent: false });
         break;
       case 'open-member':
         closeUserMenu();
@@ -1179,6 +1211,10 @@ const App = (() => {
       event.preventDefault();
       Modals.openTaskDetail(event.target.dataset.taskId);
     }
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('task-row')) {
+      event.preventDefault();
+      Modals.openTaskDetail(event.target.dataset.taskId);
+    }
     if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('member-card')) {
       event.preventDefault();
       Modals.openMemberProfile(event.target.dataset.userId);
@@ -1222,11 +1258,54 @@ const App = (() => {
     window.addEventListener('hashchange', onHashChange);
   }
 
-  function init() {
+  function installRepoAutoSync() {
+    if (!window.Repo?.autoSync) return;
+    const names = [
+      'createTask', 'updateTask', 'duplicateTask', 'deleteTask',
+      'createGroup', 'updateGroup', 'deleteGroup',
+      'completeStage', 'reopenStage', 'setStageCompleter',
+      'createTemplate', 'updateTemplate', 'deleteTemplate'
+    ];
+    names.forEach((name) => {
+      const original = Data[name];
+      if (typeof original !== 'function' || original.__repoSynced) return;
+      const wrapped = function wrappedDataAction(...args) {
+        const result = original.apply(Data, args);
+        try {
+          window.Repo.autoSync();
+        } catch (error) {}
+        return result;
+      };
+      wrapped.__repoSynced = true;
+      Data[name] = wrapped;
+    });
+  }
+
+  function afterBoot() {
+    installRepoAutoSync();
+    try {
+      window.Opencode?.attach?.();
+      window.Opencode?.markStaleJobs?.();
+    } catch (error) {}
+    if (window.Repo?.status?.().linked) {
+      window.Repo.sync({ silent: true })
+        .then(() => { if (data) refresh(); })
+        .catch(() => {});
+    }
+  }
+
+  async function init() {
     bind();
     const storedMode = localStorage.getItem('mmo_theme') || 'auto';
     applyTheme(storedMode);
     data = Data.load();
+    if (!data && window.MMO?.store) {
+      const restored = await Data.restoreFromMirror();
+      if (restored) {
+        data = restored;
+        toast('تمت استعادة بيانات المكتب من مستودع الملفات.', { type: 'success', icon: 'folder-open' });
+      }
+    }
     if (!data || !data.settings.onboarded) {
       renderOnboarding();
       setupSystemTheme();
@@ -1242,6 +1321,7 @@ const App = (() => {
     }
     render({ scrollTop: false, animate: true });
     setupSystemTheme();
+    afterBoot();
   }
 
   window.App = {

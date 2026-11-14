@@ -6,6 +6,7 @@ const Views = (() => {
     templates: { label: 'القوالب', section: 'المتابعة', title: 'القوالب', subtitle: 'مراحل جاهزة تُضمن ثبات سير العمل في كل مجموعة.' },
     team: { label: 'الأعضاء', section: 'الفريق', title: 'فريق المكتب', subtitle: 'أسماء بلا كلمات مرور، مع توثيق اسم العضو عند كل إنجاز.' },
     reports: { label: 'التقارير', section: 'الفريق', title: 'التقارير والإحصاءات', subtitle: 'قراءة أعمق للإنجاز حسب الفترة والمجموعة والعضو.' },
+    automation: { label: 'الأتمتة', section: 'الإنتاج', title: 'الأتمتة', subtitle: 'تشغيل الذكاء الاصطناعي على مهام المكتب، ومتابعة التكلفة والنتائج.' },
     settings: { label: 'الإعدادات', section: 'النظام', title: 'الإعدادات', subtitle: 'تخصيص هوية المسجد والاختصارات وإدارة نسخ البيانات.' }
   };
 
@@ -45,6 +46,74 @@ const Views = (() => {
 
   function iconButton(name, action, title, attrs = '', extra = '') {
     return `<button class="icon-btn ${extra}" data-action="${action}" ${attrs} title="${Utils.esc(title)}" aria-label="${Utils.esc(title)}">${Icons.svg(name, 18)}</button>`;
+  }
+
+  // ===== Automation helpers =====
+
+  const automationStates = {
+    queued: { label: 'في الانتظار', color: '#8e8e93' },
+    running: { label: 'جارٍ', color: '#0a84ff' },
+    done: { label: 'مكتمل', color: '#30b85a' },
+    failed: { label: 'فشل', color: '#ff453a' },
+    cancelled: { label: 'ملغى', color: '#ff9f0a' },
+    interrupted: { label: 'متوقف', color: '#ff9f0a' }
+  };
+
+  function automationModule() {
+    if (window.Opencode) return window.Opencode;
+    if (typeof Opencode !== 'undefined') return Opencode;
+    return null;
+  }
+
+  function formatCost(usd) {
+    const value = Number(usd) || 0;
+    const formatter = automationModule()?.formatCost;
+    if (typeof formatter === 'function') {
+      try {
+        return formatter(value);
+      } catch (error) {}
+    }
+    if (!value) return '$0';
+    return value < 0.01 ? `$${value.toFixed(4)}` : `$${value.toFixed(2)}`;
+  }
+
+  function formatDuration(seconds) {
+    const total = Math.max(0, Math.round(Number(seconds) || 0));
+    if (!total) return '—';
+    if (total < 60) return `${Utils.formatNumber(total)} ث`;
+    const minutes = Math.floor(total / 60);
+    if (minutes < 60) return `${Utils.formatNumber(minutes)} د`;
+    const hours = Math.floor(minutes / 60);
+    return `${Utils.formatNumber(hours)} س ${Utils.formatNumber(minutes % 60)} د`;
+  }
+
+  function jobPercent(job) {
+    return Utils.clamp(Math.round(Number(job?.progress) || 0), 0, 100);
+  }
+
+  function automationStatusChip(status) {
+    const state = automationStates[status] || automationStates.queued;
+    return `<span class="status-chip task-run-status" style="--status-color:${state.color}"><i></i>${state.label}</span>`;
+  }
+
+  function runningChip(job, { compact = false } = {}) {
+    if (!job) return '';
+    const pct = jobPercent(job);
+    const phase = job.phase || 'جارٍ التشغيل';
+    return `<span class="task-run-chip ${compact ? 'compact' : ''}" title="${Utils.esc(`${phase} · ${pct}%`)}"><i class="task-run-dot"></i><b>${pct}%</b></span>`;
+  }
+
+  function folderButton({ taskId = '', groupId = '', name = '', folder = '', size = 'mini', iconSize = 15 } = {}) {
+    const title = folder ? `${name} · ${folder}` : name;
+    const attrs = [taskId ? `data-task-id="${taskId}"` : '', groupId ? `data-group-id="${groupId}"` : ''].filter(Boolean).join(' ');
+    return `<button class="icon-btn ${size} task-folder-btn ${folder ? 'has-folder' : ''}" data-action="${taskId ? 'open-task-folder' : 'open-group-folder'}" ${attrs} title="${Utils.esc(title)}" aria-label="${Utils.esc(title)}">${Icons.svg('folder-open', iconSize)}</button>`;
+  }
+
+  function automationButton({ taskId = '', title = 'أتمتة المهمة بالذكاء الاصطناعي', size = 'mini', iconSize = 15, running = null } = {}) {
+    if (running) {
+      return `<span class="task-run-spinner" title="${Utils.esc(`${running.phase || 'جارٍ التشغيل'} · ${jobPercent(running)}%`)}" aria-label="جارٍ التشغيل">${Icons.svg('robot', iconSize)}</span>`;
+    }
+    return `<button class="icon-btn ${size} task-auto-btn" data-action="start-automation" data-task-id="${taskId}" title="${Utils.esc(title)}" aria-label="${Utils.esc(title)}">${Icons.svg('robot', iconSize)}</button>`;
   }
 
   function emptyState({ icon = 'sparkles', title, text, action = '', compact = false }) {
@@ -108,6 +177,7 @@ const Views = (() => {
 
   function renderSidebar(route, data) {
     const activeCount = data.tasks.filter((task) => Data.taskStatus(task) !== 'done').length;
+    const runningCount = data.automations.filter((job) => job.status === 'running' || job.status === 'queued').length;
     const lastBackup = data.settings.lastBackupAt
       ? `<span title="${Utils.esc(Utils.fmtDateTime(data.settings.lastBackupAt))}">${Utils.relativeTime(data.settings.lastBackupAt)}</span>`
       : '<span>لم تُنشأ بعد</span>';
@@ -126,6 +196,8 @@ const Views = (() => {
           ${navLink('tasks', route, 'tasks', 'المهام', activeCount ? `<span class="nav-badge">${Utils.formatNumber(activeCount)}</span>` : '')}
           ${navLink('groups', route, 'layers', 'المجموعات')}
           ${navLink('templates', route, 'template', 'القوالب')}
+          <div class="nav-section">الإنتاج</div>
+          ${navLink('automation', route, 'robot', 'الأتمتة', runningCount ? `<span class="nav-badge nav-badge-live">${Utils.formatNumber(runningCount)}</span>` : '')}
           <div class="nav-section">الفريق</div>
           ${navLink('team', route, 'users', 'الأعضاء')}
           ${navLink('reports', route, 'chart', 'التقارير')}
@@ -192,6 +264,7 @@ const Views = (() => {
         <a class="bottom-nav-link ${route === 'tasks' ? 'active' : ''}" href="#/tasks" data-nav="tasks">${Icons.svg('tasks', 20)}<span>المهام</span></a>
         <a class="bottom-nav-link ${route === 'groups' ? 'active' : ''}" href="#/groups" data-nav="groups">${Icons.svg('layers', 20)}<span>المجموعات</span></a>
         <a class="bottom-nav-link ${route === 'reports' ? 'active' : ''}" href="#/reports" data-nav="reports">${Icons.svg('chart', 20)}<span>التقارير</span></a>
+        <a class="bottom-nav-link ${route === 'automation' ? 'active' : ''}" href="#/automation" data-nav="automation">${Icons.svg('robot', 20)}<span>الأتمتة</span></a>
         <button class="bottom-nav-link ${moreActive ? 'active' : ''}" data-action="open-drawer">${Icons.svg('grid', 20)}<span>المزيد</span></button>
       </nav>`;
   }
@@ -265,6 +338,7 @@ const Views = (() => {
     const next = Data.nextStage(task);
     const due = Utils.dueMeta(task);
     const priority = Data.PRIORITIES[task.priority];
+    const activeJob = Data.activeAutomation(task.id);
     const color = group?.color || 'var(--accent)';
     const stageDots = task.stages.map((stage) => {
       const stateClass = stage.done ? 'done' : (next?.id === stage.id ? 'current' : '');
@@ -277,6 +351,9 @@ const Views = (() => {
           <div class="task-card-tools">
             ${task.priority !== 'normal' ? `<span class="priority-mark" style="--priority-color:${priority.color}" title="الأولوية: ${priority.label}"></span>` : ''}
             ${next ? `<button class="icon-btn mini card-complete" data-action="quick-complete" data-task-id="${task.id}" title="إكمال المرحلة التالية" aria-label="إكمال المرحلة التالية">${Icons.svg('check', 15)}</button>` : ''}
+            ${folderButton({ taskId: task.id, name: 'فتح مجلد المهمة', folder: task.folder || '', size: 'mini', iconSize: 15 })}
+            ${automationButton({ taskId: task.id, title: activeJob ? 'جارٍ تشغيل أتمتة لهذه المهمة' : 'أتمتة المهمة بالذكاء الاصطناعي', size: 'mini', iconSize: 15 })}
+            ${activeJob ? runningChip(activeJob, { compact: true }) : ''}
             <div class="menu-wrap">
               <button class="icon-btn mini" data-action="toggle-menu" title="خيارات المهمة" aria-label="خيارات المهمة">${Icons.svg('more', 17)}</button>
               <div class="menu-pop card">
@@ -313,8 +390,9 @@ const Views = (() => {
     const progress = Data.taskProgress(task);
     const next = Data.nextStage(task);
     const due = Utils.dueMeta(task);
+    const activeJob = Data.activeAutomation(task.id);
     return `
-      <button class="task-row" data-action="open-task" data-task-id="${task.id}">
+      <div class="task-row" role="button" tabindex="0" data-action="open-task" data-task-id="${task.id}" aria-label="فتح المهمة ${Utils.esc(task.title)}">
         <span class="task-row-mark" style="background:${group?.color || 'var(--accent)'}"></span>
         <span class="task-row-main">
           <strong>${Utils.esc(task.title)}</strong>
@@ -326,7 +404,12 @@ const Views = (() => {
         </span>
         <span class="due-chip tone-${due.tone}">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>
         ${avatar(assignee, 'xs')}
-      </button>`;
+        <span class="task-row-tools">
+          ${folderButton({ taskId: task.id, name: 'فتح مجلد المهمة', folder: task.folder || '', size: 'xs', iconSize: 14 })}
+          ${automationButton({ taskId: task.id, running: activeJob, size: 'xs', iconSize: 14 })}
+          ${activeJob ? runningChip(activeJob, { compact: true }) : ''}
+        </span>
+      </div>`;
   }
 
   function filterMenu({ icon, label, items, value, action = 'set-task-filter', filterKey = '' }) {
@@ -486,6 +569,67 @@ const Views = (() => {
       </div>`;
   }
 
+  function dashboardAutomationCard() {
+    const all = Data.get()?.automations || [];
+    const stats = Data.automationStats({ days: 30 });
+    const activeNow = all.filter((job) => job.status === 'running' || job.status === 'queued').length;
+    const series = Data.automationDailySeries(7, 'cost').map((point) => ({
+      label: Utils.fmtWeekday(`${point.label}T12:00:00`),
+      value: point.value
+    }));
+    const latest = all.slice().sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))[0] || null;
+    const head = `
+      <div class="card-head">
+        <div><h2>${Icons.svg('robot', 15)} استهلاك الأتمتة</h2><p>تكلفة تشغيل الذكاء الاصطناعي خلال آخر 30 يومًا</p></div>
+        <a class="text-link" href="#/automation" data-nav="automation">كل الأتمتة ${Icons.svg('chevron-left', 13)}</a>
+      </div>`;
+    if (!all.length) {
+      return `
+        <section class="card dash-automation-card">
+          ${head}
+          ${emptyState({
+            icon: 'robot',
+            title: 'لا توجد عمليات أتمتة بعد',
+            text: 'ابدأ الأتمتة من أي مهمة عبر زر الروبوت في بطاقة المهمة أو من تفاصيلها.',
+            action: `<a class="btn secondary sm" href="#/automation" data-nav="automation">${Icons.svg('robot', 15)} صفحة الأتمتة</a>`,
+            compact: true
+          })}
+        </section>`;
+    }
+    return `
+      <section class="card dash-automation-card">
+        ${head}
+        <div class="dash-automation-numbers">
+          <div class="dash-automation-cost">
+            <span>التكلفة</span>
+            <strong>${formatCost(stats.costUSD)}</strong>
+            <small>${Utils.formatNumber(stats.total)} تشغيل · متوسط ${formatCost(stats.avgCostUSD)}</small>
+          </div>
+          <div class="dash-automation-metrics">
+            <span><b>${Utils.formatNumber(stats.total)}</b><small>تشغيل</small></span>
+            <span><b>${stats.successPct}%</b><small>نجاح</small></span>
+            <span class="${activeNow ? 'is-live' : ''}"><b>${Utils.formatNumber(activeNow)}</b><small>جارٍ الآن</small></span>
+          </div>
+        </div>
+        <div class="dash-automation-chart">
+          ${Charts.line({
+            points: stats.costUSD > 0 ? series : [],
+            height: 128,
+            color: '#6c63ff',
+            ariaLabel: 'تكلفة الأتمتة اليومية خلال آخر 7 أيام',
+            emptyText: 'لا توجد تكلفة مسجلة هذا الأسبوع',
+            valueFormat: (value) => formatCost(value),
+            minStep: 0.0001
+          })}
+        </div>
+        <div class="dash-automation-note">
+          ${latest
+            ? `${Icons.svg('clock', 12)} آخر تشغيل ${Utils.relativeTime(latest.startedAt)}${latest.model ? ` · ${Utils.esc(latest.model)}` : ''}`
+            : 'لم يبدأ أي تشغيل بعد.'}
+        </div>
+      </section>`;
+  }
+
   function dashboard(data, state) {
     const overview = Data.overview();
     const groups = Data.allGroupSummaries();
@@ -628,15 +772,18 @@ const Views = (() => {
               ${waitingTasks.slice(0, 6).map(taskRow).join('')}
             </div>
           </section>` : ''}
-        <section class="card active-tasks-card">
-          <div class="card-head">
-            <div><h2>مهام قيد المتابعة</h2><p>أقرب المهام موعدًا، مع المرحلة الحالية لكل مهمة</p></div>
-            <a class="text-link" href="#/tasks" data-nav="tasks">كل المهام ${Icons.svg('chevron-left', 13)}</a>
-          </div>
-          <div class="task-list">
-            ${activeTasks.length ? activeTasks.map(taskRow).join('') : emptyState({ icon: 'check-circle', title: 'لا توجد مهام جارية', text: 'كل المهام مكتملة حاليًا.', compact: true })}
-          </div>
-        </section>`}
+        <div class="dash-grid two dash-automation-grid">
+          <section class="card active-tasks-card dash-tasks-card">
+            <div class="card-head">
+              <div><h2>مهام قيد المتابعة</h2><p>أقرب المهام موعدًا، مع المرحلة الحالية لكل مهمة</p></div>
+              <a class="text-link" href="#/tasks" data-nav="tasks">كل المهام ${Icons.svg('chevron-left', 13)}</a>
+            </div>
+            <div class="task-list dash-tasks-list">
+              ${activeTasks.length ? activeTasks.map(taskRow).join('') : emptyState({ icon: 'check-circle', title: 'لا توجد مهام جارية', text: 'كل المهام مكتملة حاليًا.', compact: true })}
+            </div>
+          </section>
+          ${dashboardAutomationCard()}
+        </div>`}
     `;
   }
 
@@ -688,6 +835,7 @@ const Views = (() => {
           ${filterMenu({ icon: 'sort', label: 'ترتيب المهام', items: sortItems, value: filters.sort, filterKey: 'sort' })}
           ${filtersActive ? `<button class="btn ghost sm" data-action="clear-task-filters">${Icons.svg('close', 14)} مسح</button>` : ''}
         </div>
+        ${window.MMO?.isDesktop ? `<button class="btn secondary sm toolbar-repo-btn" data-action="sync-repo-folders" title="مزامنة مجلدات المهام" aria-label="مزامنة مجلدات المهام">${Icons.svg('refresh', 15)}<span>مجلدات المهام</span></button>` : ''}
         <div class="view-switch" role="group" aria-label="طريقة عرض المهام">
           <button class="${view === 'cards' ? 'active' : ''}" data-action="set-task-view" data-view="cards" title="عرض البطاقات" aria-label="عرض البطاقات">${Icons.svg('grid', 16)}</button>
           <button class="${view === 'table' ? 'active' : ''}" data-action="set-task-view" data-view="table" title="عرض الجدول" aria-label="عرض الجدول">${Icons.svg('table', 16)}</button>
@@ -730,15 +878,21 @@ const Views = (() => {
             <article class="group-card card" style="--group-color:${item.group.color}">
               <div class="group-card-head">
                 <span class="group-icon">${Icons.svg('layers', 21)}</span>
-                <div class="menu-wrap">
-                  <button class="icon-btn sm" data-action="toggle-menu" title="خيارات المجموعة" aria-label="خيارات المجموعة">${Icons.svg('more', 17)}</button>
-                  <div class="menu-pop card">
-                    <button data-action="edit-group" data-group-id="${item.group.id}">${Icons.svg('edit', 16)} تعديل</button>
-                    <button class="danger" data-action="delete-group" data-group-id="${item.group.id}">${Icons.svg('trash', 16)} حذف</button>
+                <div class="group-card-tools">
+                  ${item.group.folder || window.MMO?.repo
+                    ? folderButton({ groupId: item.group.id, name: 'فتح مجلد المجموعة', folder: item.group.folder || '', size: 'sm', iconSize: 16 })
+                    : ''}
+                  <div class="menu-wrap">
+                    <button class="icon-btn sm" data-action="toggle-menu" title="خيارات المجموعة" aria-label="خيارات المجموعة">${Icons.svg('more', 17)}</button>
+                    <div class="menu-pop card">
+                      <button data-action="edit-group" data-group-id="${item.group.id}">${Icons.svg('edit', 16)} تعديل</button>
+                      <button class="danger" data-action="delete-group" data-group-id="${item.group.id}">${Icons.svg('trash', 16)} حذف</button>
+                    </div>
                   </div>
                 </div>
               </div>
               <h3>${Utils.esc(item.group.name)}</h3>
+              ${item.group.folder ? `<span class="group-folder-path" title="${Utils.esc(item.group.folder)}">${Icons.svg('folder', 12)} ${Utils.esc(item.group.folder)}</span>` : ''}
               <p class="group-template">${Icons.svg('template', 14)} ${Utils.esc(template?.name || 'بدون قالب')}</p>
               ${item.group.description ? `<p class="group-desc">${Utils.esc(item.group.description)}</p>` : '<p class="group-desc muted">لا يوجد وصف للمجموعة.</p>'}
               ${assignedStages ? `
@@ -885,6 +1039,108 @@ const Views = (() => {
           <strong>${Utils.formatNumber(value)}</strong>
         </div>`;
     }).join('');
+  }
+
+  function automationReportSection(report) {
+    const from = report.range?.fromISO ? `${report.range.fromISO}T00:00:00` : null;
+    const to = report.range?.toISO ? `${report.range.toISO}T23:59:59` : null;
+    const stats = Data.automationStats({ days: 30, from, to });
+    const rangeLabel = from || to ? Utils.fmtRange(report.range.fromISO, report.range.toISO) : 'آخر 30 يومًا';
+    const series = Data.automationDailySeries(30, 'cost').map((point) => ({
+      label: Utils.fmtDayMonth(`${point.label}T12:00:00`),
+      value: point.value
+    }));
+    const modelRows = stats.byModel.slice(0, 10);
+    const groupRows = stats.byGroup.slice(0, 10);
+    const recent = stats.recent;
+    return `
+      <section class="rep-auto-section" id="report-automation">
+        <div class="report-block-head rep-auto-head">
+          <div>
+            <h3>${Icons.svg('robot', 16)} إحصائيات الأتمتة</h3>
+            <span>تشغيلات الذكاء الاصطناعي وتكلفتها · ${Utils.esc(rangeLabel)}</span>
+          </div>
+          <span class="rep-auto-pill">${Utils.formatNumber(stats.running)} جارٍ الآن</span>
+        </div>
+        <div class="report-summary rep-auto-summary">
+          <div class="report-stat"><span>تشغيلات</span><strong>${Utils.formatNumber(stats.total)}</strong><small>${Utils.formatNumber(stats.finished)} منتهية</small></div>
+          <div class="report-stat"><span>نجاح</span><strong>${stats.successPct}%</strong><small>${Utils.formatNumber(stats.done)} ناجحة</small></div>
+          <div class="report-stat ${stats.failed ? 'danger' : ''}"><span>فشل</span><strong>${Utils.formatNumber(stats.failed)}</strong><small>${Utils.formatNumber(stats.cancelled)} ملغاة</small></div>
+          <div class="report-stat"><span>تكلفة USD</span><strong>${formatCost(stats.costUSD)}</strong><small>متوسط ${formatCost(stats.avgCostUSD)} للتشغيل</small></div>
+          <div class="report-stat"><span>متوسط مدة</span><strong>${formatDuration(stats.avgDurationSec)}</strong><small>للتشغيلات المنتهية</small></div>
+          <div class="report-stat"><span>توكنات</span><strong>${Utils.formatNumber(stats.tokens.input)} / ${Utils.formatNumber(stats.tokens.output)}</strong><small>إدخال / إخراج</small></div>
+        </div>
+        <div class="report-chart-grid rep-auto-chart">
+          <section class="report-block">
+            <div class="report-block-head"><h3>تكلفة الأتمتة اليومية</h3><span>آخر 30 يومًا · دولار</span></div>
+            ${Charts.line({
+              points: stats.costUSD > 0 ? series : [],
+              height: 190,
+              color: '#6c63ff',
+              ariaLabel: 'تكلفة الأتمتة اليومية خلال آخر 30 يومًا',
+              emptyText: 'لا توجد تكلفة مسجلة في هذه الفترة',
+              valueFormat: (value) => formatCost(value),
+              minStep: 0.0001
+            })}
+          </section>
+        </div>
+        <div class="report-tables-grid">
+          <section class="report-block">
+            <div class="report-block-head"><h3>التكلفة حسب الموديل</h3><span>${Utils.formatNumber(modelRows.length)} موديل</span></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>الموديل</th><th>تشغيلات</th><th>نجاح</th><th>التكلفة</th><th>توكنات</th></tr></thead>
+                <tbody>
+                  ${modelRows.map((row) => `
+                    <tr>
+                      <td class="rep-auto-model" dir="ltr">${Utils.esc(row.key || 'غير محدد')}</td>
+                      <td>${Utils.formatNumber(row.runs)}</td>
+                      <td>${row.runs ? Math.round((row.done / row.runs) * 100) : 0}%</td>
+                      <td>${formatCost(row.costUSD)}</td>
+                      <td>${Utils.formatNumber(row.tokens)}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" class="table-empty">لا توجد تشغيلات في هذه الفترة</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="report-block">
+            <div class="report-block-head"><h3>التكلفة حسب المجموعة</h3><span>${Utils.formatNumber(groupRows.length)} مجموعة</span></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead><tr><th>المجموعة</th><th>تشغيلات</th><th>التكلفة</th></tr></thead>
+                <tbody>
+                  ${groupRows.map((row) => `
+                    <tr>
+                      <td>${Utils.esc(row.key || 'غير محدد')}</td>
+                      <td>${Utils.formatNumber(row.runs)}</td>
+                      <td>${formatCost(row.costUSD)}</td>
+                    </tr>`).join('') || '<tr><td colspan="3" class="table-empty">لا توجد تشغيلات في هذه الفترة</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+        <div class="report-tables-grid single">
+          <section class="report-block">
+            <div class="report-block-head"><h3>أحدث التشغيلات</h3><span>آخر ${Utils.formatNumber(recent.length)} تشغيل</span></div>
+            <div class="table-wrap">
+              <table class="data-table rep-auto-recent">
+                <thead><tr><th>المهمة</th><th>الحالة</th><th>الموديل</th><th>التكلفة</th><th>الوقت</th></tr></thead>
+                <tbody>
+                  ${recent.map((job) => `
+                    <tr>
+                      <td class="rep-auto-task">${Utils.esc(job.taskTitle || 'مهمة محذوفة')}</td>
+                      <td>${automationStatusChip(job.status)}</td>
+                      <td class="rep-auto-model" dir="ltr">${Utils.esc(job.model || '—')}</td>
+                      <td>${formatCost(job.usage?.costUSD)}</td>
+                      <td class="muted-cell">${Utils.relativeTime(job.startedAt)}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" class="table-empty">لا توجد تشغيلات مسجلة</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>`;
   }
 
   function reports(data, state) {
@@ -1037,6 +1293,7 @@ const Views = (() => {
             </div>
           </section>
         </div>
+        ${automationReportSection(report)}
         <footer class="report-foot">
           <span>${Utils.esc(data.settings.mosqueName)} · ${Utils.esc(data.settings.tagline || 'المكتب الإعلامي')}</span>
           <span>أُنشئ التقرير في ${Utils.fmtDateTime(report.generatedAt)}</span>
@@ -1057,7 +1314,7 @@ const Views = (() => {
       ? `${Utils.fmtDateTime(data.settings.lastBackupAt)}`
       : 'لم تُنشأ بعد';
     return `
-      ${pageHead('الإعدادات', 'هوية المسجد، الشعار، القفل، الاختصارات، المظهر، والنسخ الاحتياطي', '', 'النظام')}
+      ${pageHead('الإعدادات', 'هوية المسجد، الشعار، القفل، المستودع، الأتمتة، الاختصارات، المظهر، والنسخ الاحتياطي', '', 'النظام')}
       <div class="settings-grid">
         <section class="settings-card card">
           <div class="card-head">
@@ -1099,6 +1356,8 @@ const Views = (() => {
             <span class="muted">آخر نسخة احتياطية: ${Utils.esc(lastBackup)}</span>
           </div>
         </section>
+        ${window.SettingsSections?.repoMarkup ? window.SettingsSections.repoMarkup(data) : ''}
+        ${window.SettingsSections?.aiMarkup ? window.SettingsSections.aiMarkup(data) : ''}
         <section class="settings-card card span-two security-card">
           <div class="card-head">
             <div><h2>قفل الإعدادات العامة</h2><p>حماية تغيير الأعضاء وهوية المسجد والحذف والاستيراد بكلمة مرور.</p></div>
@@ -1226,8 +1485,25 @@ const Views = (() => {
     `;
   }
 
+  function automation(data, state) {
+    const ui = window.AutomationUI || (typeof AutomationUI !== 'undefined' ? AutomationUI : null);
+    if (!ui || typeof ui.page !== 'function') {
+      return `
+        ${pageHead('الأتمتة', meta.automation.subtitle)}
+        <section class="card">
+          ${emptyState({
+            icon: 'robot',
+            title: 'وحدة الأتمتة غير محمّلة',
+            text: 'تأكد من تحميل js/automation-ui.js في الصفحة ثم أعد التحميل.',
+            compact: true
+          })}
+        </section>`;
+    }
+    return ui.page(data, state) || '';
+  }
+
   function render(route, data, state) {
-    const routes = { dashboard, tasks, groups, templates, team, reports, settings };
+    const routes = { dashboard, tasks, groups, templates, team, reports, automation, settings };
     const page = routes[route] ? routes[route](data, state) : dashboard(data, state);
     return layout(route, `<div class="${state.animatePage ? 'page-enter' : ''}">${page}</div>`, data, state);
   }
@@ -1248,6 +1524,11 @@ const Views = (() => {
     badgeList,
     shortcutIcon,
     shortcutDisplay,
+    automationStatusChip,
+    formatCost,
+    formatDuration,
+    jobPercent,
+    runningChip,
     statusColors
   };
 })();

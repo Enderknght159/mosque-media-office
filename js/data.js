@@ -1,6 +1,6 @@
 const Data = (() => {
   const STORAGE_KEY = 'mosque_media_office_v1';
-  const VERSION = 1;
+  const VERSION = 2;
 
   const PALETTE = [
     { name: 'أزرق', value: '#0a84ff' },
@@ -73,6 +73,33 @@ const Data = (() => {
         updatedAt: rawSecurity.updatedAt || now
       }
       : null;
+    const rawRepo = rawSettings.repo && typeof rawSettings.repo === 'object' ? rawSettings.repo : null;
+    const repoPath = String(rawRepo?.path || '').trim();
+    const repo = repoPath ? {
+      path: repoPath,
+      repoId: String(rawRepo.repoId || '').trim(),
+      autoRename: rawRepo.autoRename !== false,
+      linkedAt: rawRepo.linkedAt || now,
+      lastSyncAt: rawRepo.lastSyncAt || null
+    } : null;
+    const rawAi = rawSettings.ai && typeof rawSettings.ai === 'object' ? rawSettings.ai : {};
+    const rawFilter = rawAi.filter && typeof rawAi.filter === 'object' ? rawAi.filter : {};
+    const cleanModelList = (value) => (Array.isArray(value)
+      ? [...new Set(value.map((item) => String(item || '').trim()).filter((item) => item && item.length <= 120))].slice(0, 600)
+      : []);
+    const ai = {
+      lastModel: String(rawAi.lastModel || '').trim().slice(0, 120),
+      opencodePath: String(rawAi.opencodePath || '').trim().slice(0, 400),
+      filter: {
+        mode: rawFilter.mode === 'allow' ? 'allow' : 'all',
+        allowed: cleanModelList(rawFilter.allowed),
+        blocked: cleanModelList(rawFilter.blocked)
+      },
+      modelsCache: {
+        at: rawAi.modelsCache?.at || null,
+        list: cleanModelList(rawAi.modelsCache?.list)
+      }
+    };
     const settings = {
       mosqueName: String(rawSettings.mosqueName || 'مسجد الحي').trim() || 'مسجد الحي',
       tagline: String(rawSettings.tagline || 'المكتب الإعلامي').trim() || 'المكتب الإعلامي',
@@ -90,7 +117,9 @@ const Data = (() => {
       createdAt: rawSettings.createdAt || now,
       updatedAt: rawSettings.updatedAt || now,
       lastBackupAt: rawSettings.lastBackupAt || null,
-      lastBackupType: rawSettings.lastBackupType || null
+      lastBackupType: rawSettings.lastBackupType || null,
+      repo,
+      ai
     };
 
     const users = Array.isArray(raw.users) ? raw.users.map((user, index) => ({
@@ -135,6 +164,7 @@ const Data = (() => {
         color: /^#[0-9a-f]{6}$/i.test(String(group.color || '')) ? group.color : PALETTE[index % PALETTE.length].value,
         description: String(group.description || '').trim(),
         stageAssignees,
+        folder: String(group.folder || '').trim(),
         createdAt: group.createdAt || now
       };
     }).filter((group) => group.name) : [];
@@ -167,6 +197,7 @@ const Data = (() => {
         dueDate: /^\d{4}-\d{2}-\d{2}$/.test(String(task.dueDate || '')) ? task.dueDate : '',
         priority: PRIORITIES[task.priority] ? task.priority : 'normal',
         description: String(task.description || '').trim(),
+        folder: String(task.folder || '').trim(),
         createdAt: task.createdAt || now,
         updatedAt: task.updatedAt || task.createdAt || now,
         isDemo: Boolean(task.isDemo)
@@ -175,6 +206,52 @@ const Data = (() => {
 
     const activeUserId = userIds.has(raw.activeUserId) ? raw.activeUserId : (users[0]?.id || null);
 
+    const prompts = Array.isArray(raw.prompts) ? raw.prompts.map((prompt, index) => ({
+      id: safeId(prompt.id, `prm_${index}`),
+      name: String(prompt.name || '').trim() || `برومت ${index + 1}`,
+      description: String(prompt.description || '').trim(),
+      content: String(prompt.content || '').slice(0, 40000),
+      createdAt: prompt.createdAt || now,
+      updatedAt: prompt.updatedAt || prompt.createdAt || now
+    })).filter((prompt) => prompt.name).slice(0, 200) : [];
+
+    const AUTOMATION_STATES = ['queued', 'running', 'done', 'failed', 'cancelled', 'interrupted'];
+    const automations = Array.isArray(raw.automations) ? raw.automations.map((job, index) => {
+      const usage = job.usage && typeof job.usage === 'object' ? job.usage : {};
+      const tokens = (value) => Math.max(0, Math.round(Number(value) || 0));
+      return {
+        id: safeId(job.id, `job_${index}`),
+        taskId: safeId(job.taskId, `task_${index}`),
+        taskTitle: String(job.taskTitle || '').trim(),
+        groupId: job.groupId ? safeId(job.groupId, `grp_${index}`) : null,
+        groupName: String(job.groupName || '').trim(),
+        promptId: job.promptId ? safeId(job.promptId, `prm_${index}`) : null,
+        promptName: String(job.promptName || '').trim(),
+        model: String(job.model || '').trim().slice(0, 120),
+        notes: String(job.notes || '').slice(0, 8000),
+        promptText: String(job.promptText || '').slice(0, 60000),
+        status: AUTOMATION_STATES.includes(job.status) ? job.status : 'queued',
+        progress: Utils.clamp(Number(job.progress) || 0, 0, 100),
+        phase: String(job.phase || '').slice(0, 200),
+        etaSeconds: Math.max(0, Math.round(Number(job.etaSeconds) || 0)),
+        steps: Math.max(0, Math.round(Number(job.steps) || 0)),
+        sessionID: String(job.sessionID || '').slice(0, 80),
+        taskFolder: String(job.taskFolder || '').slice(0, 500),
+        startedAt: job.startedAt || now,
+        endedAt: job.endedAt || null,
+        exitCode: job.exitCode === 0 || job.exitCode ? Number(job.exitCode) : null,
+        error: String(job.error || '').slice(0, 4000),
+        usage: {
+          input: tokens(usage.input),
+          output: tokens(usage.output),
+          reasoning: tokens(usage.reasoning),
+          cacheRead: tokens(usage.cacheRead),
+          cacheWrite: tokens(usage.cacheWrite),
+          costUSD: Math.max(0, Math.round((Number(usage.costUSD) || 0) * 1e6) / 1e6)
+        }
+      };
+    }).slice(-1500) : [];
+
     const data = {
       version: VERSION,
       settings,
@@ -182,6 +259,8 @@ const Data = (() => {
       templates,
       groups,
       tasks,
+      prompts,
+      automations,
       activeUserId
     };
 
@@ -201,10 +280,38 @@ const Data = (() => {
     }
   }
 
+  let mirrorTimer = null;
+
+  function scheduleMirror() {
+    if (!current || typeof window === 'undefined' || !window.MMO?.store) return;
+    if (mirrorTimer) clearTimeout(mirrorTimer);
+    mirrorTimer = setTimeout(() => {
+      mirrorTimer = null;
+      try {
+        window.MMO.store.writeMirror(JSON.stringify(current));
+      } catch (error) {}
+    }, 2500);
+  }
+
+  async function restoreFromMirror() {
+    if (!window.MMO?.store) return null;
+    try {
+      const result = await window.MMO.store.readMirror();
+      if (!result?.ok || !result.data?.snapshot) return null;
+      current = normalize(JSON.parse(result.data.snapshot));
+      unlocked = false;
+      save();
+      return current;
+    } catch (error) {
+      return null;
+    }
+  }
+
   function save() {
     if (!current) return;
     current.settings.updatedAt = nowISO();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    scheduleMirror();
   }
 
   function get() {
@@ -1460,6 +1567,300 @@ const Data = (() => {
     };
   }
 
+  // ---------------------------------------------------------------- prompts
+  function prompts() {
+    return current?.prompts || [];
+  }
+
+  function findPrompt(id) {
+    return prompts().find((prompt) => prompt.id === id) || null;
+  }
+
+  function newPromptId() {
+    let id = Utils.uid('prm');
+    let counter = 1;
+    while (findPrompt(id)) {
+      id = `${Utils.uid('prm')}_${counter}`;
+      counter += 1;
+    }
+    return id;
+  }
+
+  function createPrompt({ name, description = '', content = '' } = {}) {
+    if (!current) return null;
+    const prompt = {
+      id: newPromptId(),
+      name: String(name || '').trim() || 'برومت جديد',
+      description: String(description || '').trim(),
+      content: String(content || ''),
+      createdAt: nowISO(),
+      updatedAt: nowISO()
+    };
+    current.prompts.unshift(prompt);
+    save();
+    return prompt;
+  }
+
+  function updatePrompt(id, { name, description, content } = {}) {
+    const prompt = findPrompt(id);
+    if (!prompt) return null;
+    if (name !== undefined) prompt.name = String(name || '').trim() || prompt.name;
+    if (description !== undefined) prompt.description = String(description || '').trim();
+    if (content !== undefined) prompt.content = String(content || '');
+    prompt.updatedAt = nowISO();
+    save();
+    return prompt;
+  }
+
+  function deletePrompt(id) {
+    if (!current) return false;
+    const before = current.prompts.length;
+    current.prompts = current.prompts.filter((prompt) => prompt.id !== id);
+    save();
+    return current.prompts.length !== before;
+  }
+
+  function duplicatePrompt(id) {
+    const prompt = findPrompt(id);
+    if (!prompt) return null;
+    const copy = {
+      ...prompt,
+      id: newPromptId(),
+      name: `${prompt.name} (نسخة)`,
+      createdAt: nowISO(),
+      updatedAt: nowISO()
+    };
+    current.prompts.unshift(copy);
+    save();
+    return copy;
+  }
+
+  // ------------------------------------------------------------- repo link
+  function setRepoSettings(patch = {}) {
+    if (!current) return null;
+    const base = current.settings.repo || { path: '', repoId: '', autoRename: true, linkedAt: nowISO(), lastSyncAt: null };
+    const next = { ...base, ...patch };
+    current.settings.repo = next.path ? next : null;
+    save();
+    return current.settings.repo;
+  }
+
+  function linkRepo({ path, repoId = '', autoRename = true } = {}) {
+    const clean = String(path || '').trim();
+    if (!clean) return null;
+    return setRepoSettings({ path: clean, repoId: String(repoId || ''), autoRename, linkedAt: nowISO(), lastSyncAt: null });
+  }
+
+  function unlinkRepo() {
+    if (!current) return false;
+    current.settings.repo = null;
+    current.groups.forEach((group) => { group.folder = ''; });
+    current.tasks.forEach((task) => { task.folder = ''; });
+    save();
+    return true;
+  }
+
+  function applyFolderIndex({ groups = {}, tasks = {}, syncedAt = null } = {}) {
+    if (!current) return;
+    current.groups.forEach((group) => {
+      if (typeof groups[group.id] === 'string') group.folder = groups[group.id];
+    });
+    current.tasks.forEach((task) => {
+      if (typeof tasks[task.id] === 'string') task.folder = tasks[task.id];
+    });
+    if (current.settings.repo) current.settings.repo.lastSyncAt = syncedAt || nowISO();
+    save();
+  }
+
+  function folderFor(target = {}) {
+    if (target.taskId) return findTask(target.taskId)?.folder || '';
+    if (target.groupId) return findGroup(target.groupId)?.folder || '';
+    return '';
+  }
+
+  // ------------------------------------------------------------ automations
+  function automation(id) {
+    return (current?.automations || []).find((job) => job.id === id) || null;
+  }
+
+  function startAutomation({ taskId, promptId = null, promptName = '', model = '', notes = '', promptText = '', taskFolder = '', sessionID = '' } = {}) {
+    if (!current) return null;
+    const task = findTask(taskId);
+    if (!task) return null;
+    const group = findGroup(task.groupId);
+    let jobId = Utils.uid('job');
+    let suffix = 1;
+    while (automation(jobId)) {
+      jobId = `${Utils.uid('job')}_${suffix}`;
+      suffix += 1;
+    }
+    const job = {
+      id: jobId,
+      taskId: task.id,
+      taskTitle: task.title,
+      groupId: group?.id || null,
+      groupName: group?.name || '',
+      promptId,
+      promptName,
+      model,
+      notes,
+      promptText,
+      status: 'queued',
+      progress: 0,
+      phase: 'في الانتظار',
+      etaSeconds: 0,
+      steps: 0,
+      sessionID,
+      taskFolder,
+      startedAt: nowISO(),
+      endedAt: null,
+      exitCode: null,
+      error: '',
+      usage: { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, costUSD: 0 }
+    };
+    current.automations.push(job);
+    if (current.automations.length > 1500) current.automations = current.automations.slice(-1500);
+    save();
+    return job;
+  }
+
+  function updateAutomation(id, patch = {}) {
+    const job = automation(id);
+    if (!job) return null;
+    const next = { ...patch };
+    if (patch.usage) next.usage = { ...job.usage, ...patch.usage };
+    Object.assign(job, next);
+    save();
+    return job;
+  }
+
+  function finishAutomation(id, { status = 'done', exitCode = null, error = '', usage = null, endedAt = null } = {}) {
+    const job = automation(id);
+    if (!job) return null;
+    if (status === 'done' || status === 'failed' || status === 'cancelled' || status === 'interrupted') {
+      job.status = status;
+      job.endedAt = endedAt || nowISO();
+      job.exitCode = exitCode;
+      job.error = error || '';
+      if (usage) job.usage = { ...job.usage, ...usage };
+      if (status === 'done') job.progress = 100;
+      save();
+    }
+    return job;
+  }
+
+  function activeAutomation(taskId) {
+    return (current?.automations || []).find((job) => job.taskId === taskId && (job.status === 'running' || job.status === 'queued')) || null;
+  }
+
+  function automationsForTask(taskId) {
+    return (current?.automations || []).filter((job) => job.taskId === taskId).slice().reverse();
+  }
+
+  function automationStats({ days = 30, from = null, to = null } = {}) {
+    const all = current?.automations || [];
+    const end = to ? new Date(to) : new Date();
+    const start = from
+      ? new Date(from)
+      : new Date(end.getTime() - Math.max(1, Number(days) || 30) * 86400000);
+    const inRange = all.filter((job) => {
+      const stamp = new Date(job.startedAt);
+      return !Number.isNaN(stamp.getTime()) && stamp >= start && stamp <= end;
+    });
+    const finished = inRange.filter((job) => ['done', 'failed', 'cancelled'].includes(job.status));
+    const succeeded = inRange.filter((job) => job.status === 'done');
+    const failed = inRange.filter((job) => job.status === 'failed');
+    const cancelled = inRange.filter((job) => job.status === 'cancelled');
+    const running = inRange.filter((job) => job.status === 'running' || job.status === 'queued');
+    const sum = (list, pick) => list.reduce((total, item) => total + (Number(pick(item)) || 0), 0);
+    const duration = (job) => {
+      const startStamp = new Date(job.startedAt).getTime();
+      const endStamp = job.endedAt ? new Date(job.endedAt).getTime() : null;
+      return startStamp && endStamp && endStamp > startStamp ? (endStamp - startStamp) / 1000 : 0;
+    };
+    const groupBy = (list, keyOf) => {
+      const map = new Map();
+      list.forEach((job) => {
+        const key = keyOf(job) || 'غير محدد';
+        const entry = map.get(key) || { key, runs: 0, costUSD: 0, tokens: 0, done: 0, failed: 0 };
+        entry.runs += 1;
+        entry.costUSD += Number(job.usage?.costUSD) || 0;
+        entry.tokens += (Number(job.usage?.input) || 0) + (Number(job.usage?.output) || 0);
+        if (job.status === 'done') entry.done += 1;
+        if (job.status === 'failed') entry.failed += 1;
+        map.set(key, entry);
+      });
+      return [...map.values()].sort((a, b) => b.costUSD - a.costUSD || b.runs - a.runs);
+    };
+    return {
+      from: start.toISOString(),
+      to: end.toISOString(),
+      total: inRange.length,
+      running: running.length,
+      done: succeeded.length,
+      failed: failed.length,
+      cancelled: cancelled.length,
+      finished: finished.length,
+      successPct: finished.length ? Math.round((succeeded.length / finished.length) * 100) : 0,
+      costUSD: Math.round(sum(inRange, (job) => job.usage?.costUSD) * 1e6) / 1e6,
+      tokens: {
+        input: sum(inRange, (job) => job.usage?.input),
+        output: sum(inRange, (job) => job.usage?.output),
+        reasoning: sum(inRange, (job) => job.usage?.reasoning),
+        cacheRead: sum(inRange, (job) => job.usage?.cacheRead),
+        cacheWrite: sum(inRange, (job) => job.usage?.cacheWrite)
+      },
+      avgDurationSec: finished.length
+        ? Math.round(sum(finished, duration) / finished.length)
+        : 0,
+      avgCostUSD: inRange.length ? Math.round((sum(inRange, (job) => job.usage?.costUSD) / inRange.length) * 1e6) / 1e6 : 0,
+      byModel: groupBy(inRange, (job) => job.model),
+      byGroup: groupBy(inRange, (job) => job.groupName || findGroup(job.groupId)?.name),
+      byPrompt: groupBy(inRange, (job) => job.promptName),
+      recent: inRange.slice(-8).reverse(),
+      active: running.slice().reverse()
+    };
+  }
+
+  function automationDailySeries(days = 30, metric = 'cost') {
+    const count = Utils.clamp(Number(days) || 30, 1, 120);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const points = [];
+    for (let index = count - 1; index >= 0; index -= 1) {
+      const day = new Date(now.getTime() - index * 86400000);
+      points.push({ date: day, value: 0, runs: 0 });
+    }
+    const index0 = points[0].date.getTime();
+    (current?.automations || []).forEach((job) => {
+      const stamp = new Date(job.startedAt);
+      if (Number.isNaN(stamp.getTime())) return;
+      const day = new Date(stamp);
+      day.setHours(0, 0, 0, 0);
+      const offset = Math.round((day.getTime() - index0) / 86400000);
+      const point = points[offset];
+      if (!point) return;
+      point.runs += 1;
+      point.value += metric === 'cost' ? (Number(job.usage?.costUSD) || 0) : 1;
+    });
+    return points.map((point) => ({
+      label: point.date.toISOString().slice(0, 10),
+      value: metric === 'cost' ? Math.round(point.value * 1e6) / 1e6 : point.value,
+      runs: point.runs
+    }));
+  }
+
+  function setAiSettings(patch = {}) {
+    if (!current) return null;
+    const base = current.settings.ai;
+    const next = { ...base, ...patch };
+    if (patch.filter) next.filter = { ...base.filter, ...patch.filter };
+    if (patch.modelsCache) next.modelsCache = { ...base.modelsCache, ...patch.modelsCache };
+    current.settings.ai = next;
+    save();
+    return next;
+  }
+
   function securityEnabled() {
     return Boolean(current?.settings?.security?.hash);
   }
@@ -1639,6 +2040,27 @@ const Data = (() => {
     clearPassword,
     securityFingerprint,
     clearDemo,
-    storageBytes
+    storageBytes,
+    prompts,
+    findPrompt,
+    createPrompt,
+    updatePrompt,
+    deletePrompt,
+    duplicatePrompt,
+    setRepoSettings,
+    linkRepo,
+    unlinkRepo,
+    applyFolderIndex,
+    folderFor,
+    automation,
+    startAutomation,
+    updateAutomation,
+    finishAutomation,
+    activeAutomation,
+    automationsForTask,
+    automationStats,
+    automationDailySeries,
+    setAiSettings,
+    restoreFromMirror
   };
 })();

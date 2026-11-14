@@ -498,3 +498,214 @@
 .task-table tbody tr.is-done .sticky-col { background: color-mix(in srgb, var(--green) 10%, var(--surface-solid)); }
 .task-table tbody tr.is-done:hover td { background: color-mix(in srgb, var(--green) 9%, var(--surface-2)); }
 .done-mark { display: inline-flex; align-items: center; justify-content: center; color: var(--green); vertical-align: -2px; margin-inline-end: 4px; }
+
+/* ===== Task folder + automation affordances (additive) ===== */
+.task-folder-btn { position: relative; }
+.task-folder-btn.has-folder { color: var(--accent); }
+.task-folder-btn.has-folder::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 1.5px var(--surface-solid);
+}
+.task-auto-btn { color: var(--purple); }
+.task-auto-btn:hover { background: color-mix(in srgb, var(--purple) 12%, transparent); color: var(--purple); }
+
+.task-run-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.task-run-chip.compact { padding: 0 5px; font-size: 7.5px; gap: 3px; }
+.task-run-chip b { font-weight: 700; }
+.task-run-dot {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  animation: taskRunPulse 1.5s ease-in-out infinite;
+}
+@keyframes taskRunPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.65); }
+}
+.task-run-spinner {
+  position: relative;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  color: var(--accent);
+  border-radius: 8px;
+}
+.task-run-spinner::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-top-color: var(--accent);
+  animation: taskRunSpin 0.9s linear infinite;
+}
+@keyframes taskRunSpin { to { transform: rotate(360deg); } }
+.task-run-status { font-size: 8px; }
+.task-run-status i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* Task row is now a div[role=button]; keep grid alignment + tools column */
+.task-row[role='button'] { grid-template-columns: 3px minmax(0, 1fr) 140px auto auto auto; cursor: pointer; }
+.task-row[role='button']:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; }
+.task-row-tools { display: flex; align-items: center; gap: 1px; justify-self: end; flex: 0 0 auto; }
+.task-row-tools .task-run-chip { margin-inline-start: 2px; }
+.task-row-tools .icon-btn { color: var(--text-3); }
+.task-row-tools .task-folder-btn.has-folder { color: var(--accent); }
+.task-row-tools .task-auto-btn { color: var(--purple); }
+.task-row:hover .task-row-tools .icon-btn { color: var(--text-2); }
+.task-row:hover .task-row-tools .task-folder-btn.has-folder { color: var(--accent); }
+.task-row:hover .task-row-tools .task-auto-btn { color: var(--purple); }
+
+/* ===== Dashboard automation card (additive) ===== */
+.dash-automation-grid { align-items: stretch; }
+.dash-automation-grid > .card { min-width: 0; }
+.dash-automation-grid .dash-tasks-list {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: 4px;
+  margin-inline-end: -4px;
+}
+.dash-automation-card { display: flex; flex-direction: column; }
+.dash-automation-card .card-head h2 { display: flex; align-items: center; gap: 5px; }
+.dash-automation-card .card-head h2 .icon { color: var(--purple); }
+.dash-automation-numbers { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.dash-automation-cost { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.dash-automation-cost > span { font-size: 9px; color: var(--text-3); }
+.dash-automation-cost strong { font-size: 25px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.dash-automation-cost small { font-size: 8.5px; color: var(--text-3); }
+.dash-automation-metrics { display: flex; gap: 12px; flex: 0 0 auto; }
+.dash-automation-metrics span { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.4; }
+.dash-automation-metrics b { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dash-automation-metrics small { font-size: 8px; color: var(--text-3); white-space: nowrap; }
+.dash-automation-metrics .is-live b { color: var(--accent); }
+.dash-automation-chart { margin: 6px 0 0; }
+.dash-automation-chart .line-chart { min-height: 104px; }
+.dash-automation-chart .chart-empty { min-height: 104px; }
+.dash-automation-note {
+  margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 8.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-automation-note .icon { flex: 0 0 auto; color: var(--text-3); }
+.dash-automation-card .empty-state.compact { margin: 2px 0; }
+
+/* ===== Task detail modal: folder + automation actions ===== */
+.task-action-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 11px 0 3px; }
+.task-action-row .btn { height: 32px; }
+.task-action-primary {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.task-action-primary:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.task-action-primary .icon { color: var(--accent); }
+
+.task-run-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  background: var(--accent-soft);
+}
+.task-run-strip-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--surface-solid);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.task-run-strip-body { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 4px; }
+.task-run-strip-head { display: flex; align-items: center; gap: 7px; }
+.task-run-strip-head strong { font-size: 10.5px; }
+.task-run-strip-body p { font-size: 8.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-run-strip-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.task-run-strip-actions .btn { height: 28px; }
+
+.task-auto-log { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.task-auto-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; min-width: 0; }
+.task-auto-row + .task-auto-row { border-top: 1px solid var(--border); }
+.task-auto-model {
+  flex: 1;
+  min-width: 0;
+  direction: ltr;
+  text-align: start;
+  font-size: 8.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-auto-cost { font-size: 9px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.task-auto-time { font-size: 8px; color: var(--text-3); white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .task-row[role='button'] { grid-template-columns: 3px minmax(0, 1fr) auto auto auto; gap: 8px; }
+  .task-row[role='button'] .task-row-progress { display: none; }
+  .dash-automation-metrics { gap: 10px; }
+}
+
+@media (max-width: 560px) {
+  .task-row[role='button'] { gap: 6px; padding: 9px 5px; }
+  .task-row[role='button'] .task-run-chip { display: none; }
+  .task-row-tools .icon-btn.xs { width: 23px; height: 23px; }
+  .task-run-spinner { width: 23px; height: 23px; }
+  .task-action-row .btn { flex: 1 1 auto; justify-content: center; }
+  .task-run-strip-actions { width: 100%; }
+  .task-run-strip-actions .btn { flex: 1; justify-content: center; }
+  .task-auto-time { display: none; }
+}
+
+/* Dashboard compact rows: drop the progress column so the tools fit the half-width card */
+.dash-automation-grid .task-row[role='button'] { grid-template-columns: 3px minmax(0, 1fr) auto auto auto; gap: 9px; }
+.dash-automation-grid .task-row[role='button'] .task-row-progress { display: none; }
+@media (max-width: 560px) {
+  .dash-automation-grid .task-row[role='button'] { gap: 7px; }
+}
+
+/* Keep the task card header on one line when the group name is long */
+.task-card-top { min-width: 0; }
+.task-card-top > .chip { min-width: 0; max-width: 100%; overflow: hidden; }
+.task-card-tools { flex-wrap: nowrap; }

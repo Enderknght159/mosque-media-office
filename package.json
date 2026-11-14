@@ -1,24 +1,38 @@
 {
   "name": "mosque-media-office",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "نظام متابعة إنجازات المكتب الإعلامي في المسجد",
-  "main": "server.js",
+  "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "electron .",
     "test": "node test/ui-test.js",
-    "build:exe": "node scripts/build-exe.js"
+    "test:data": "node test/data-v2.js",
+    "test:repo": "node test/repo-unit.js",
+    "test:offline": "node test/data-v2.js && node test/repo-unit.js",
+    "test:ui": "node test/ui-test.js && node test/v2-screens.js && node test/v2-modal.js",
+    "test:e2e": "node test/electron-e2e.js",
+    "build:exe": "node scripts/build-exe.js",
+    "build": "node scripts/build-electron.js",
+    "build:portable": "node scripts/build-electron.js --portable",
+    "build:installer": "node scripts/build-electron.js --installer"
   },
   "keywords": [
     "mosque",
     "media",
     "tasks",
-    "workflow"
+    "workflow",
+    "electron",
+    "opencode"
   ],
-  "author": "",
+  "author": "mosque-media-office",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
     "playwright-core": "^1.64.1",
-    "postject": "^1.0.0-alpha.6"
+    "postject": "^1.0.0-alpha.6",
+    "sharp": "^0.35.5"
   }
 }

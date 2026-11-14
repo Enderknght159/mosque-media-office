@@ -41,18 +41,28 @@ const Charts = (() => {
     return path;
   }
 
-  function line({ points = [], height = 240, color = '#0a84ff', ariaLabel = 'نشاط الإنجاز', emptyText = 'لا توجد بيانات في هذه الفترة' }) {
+  function niceStep(rawMax) {
+    if (!(rawMax > 0)) return 1;
+    const rough = rawMax / 4;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+    const normalized = rough / magnitude;
+    const multiplier = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10;
+    return multiplier * magnitude;
+  }
+
+  function line({ points = [], height = 240, color = '#0a84ff', ariaLabel = 'نشاط الإنجاز', emptyText = 'لا توجد بيانات في هذه الفترة', valueFormat = null, minStep = 1 }) {
     if (!points.length) {
       return `<div class="chart-empty"><span>${Icons.svg('chart', 22)}</span><p>${Utils.esc(emptyText)}</p></div>`;
     }
+    const format = typeof valueFormat === 'function' ? valueFormat : (value) => Utils.formatNumber(value);
     const width = 760;
     const pad = { top: 18, right: 18, bottom: 34, left: 42 };
     const innerWidth = width - pad.left - pad.right;
     const innerHeight = height - pad.top - pad.bottom;
     const values = points.map((point) => Number(point.value) || 0);
-    const rawMax = Math.max(1, ...values);
-    const step = Math.max(1, Math.ceil(rawMax / 4));
-    const maxValue = step * 4;
+    const rawMax = Math.max(0, ...values);
+    const step = Math.max(Number(minStep) || 0, rawMax > 0 ? niceStep(rawMax) : 1) || 1;
+    const maxValue = step * 4 || 1;
     const xFor = (index) => pad.left + (points.length === 1 ? innerWidth / 2 : (index / (points.length - 1)) * innerWidth);
     const yFor = (value) => pad.top + innerHeight - (value / maxValue) * innerHeight;
     const coords = points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.value) || 0), value: Number(point.value) || 0, label: point.label }));
@@ -64,7 +74,7 @@ const Charts = (() => {
     const grid = [0, 1, 2, 3, 4].map((index) => {
       const value = index * step;
       const y = yFor(value);
-      return `<g>${index > 0 ? `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}" stroke="var(--chart-grid)" stroke-width="1" stroke-dasharray="${index === 0 ? '0' : '3 5'}"/>` : ''}<text x="${pad.left - 10}" y="${(y + 4).toFixed(2)}" text-anchor="end" fill="var(--text-3)" font-size="10">${Utils.formatNumber(value)}</text></g>`;
+      return `<g>${index > 0 ? `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}" stroke="var(--chart-grid)" stroke-width="1" stroke-dasharray="${index === 0 ? '0' : '3 5'}"/>` : ''}<text x="${pad.left - 10}" y="${(y + 4).toFixed(2)}" text-anchor="end" fill="var(--text-3)" font-size="10">${Utils.esc(format(value))}</text></g>`;
     }).join('');
     const labelStep = Math.max(1, Math.ceil(points.length / 6));
     const labels = points.map((point, index) => {
@@ -72,7 +82,7 @@ const Charts = (() => {
       const x = xFor(index);
       return `<text x="${x.toFixed(2)}" y="${height - 10}" text-anchor="middle" fill="var(--text-3)" font-size="10">${Utils.esc(point.label)}</text>`;
     }).join('');
-    const dots = coords.map((point) => `<g><circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.2" fill="var(--surface-solid)" stroke="${color}" stroke-width="2"/><circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="12" fill="transparent"><title>${Utils.esc(point.label)}: ${Utils.formatNumber(point.value)}</title></circle></g>`).join('');
+    const dots = coords.map((point) => `<g><circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="3.2" fill="var(--surface-solid)" stroke="${color}" stroke-width="2"/><circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="12" fill="transparent"><title>${Utils.esc(point.label)}: ${Utils.esc(format(point.value))}</title></circle></g>`).join('');
     return `
       <div class="line-chart" role="img" aria-label="${Utils.esc(ariaLabel)}">
         <svg viewBox="0 0 ${width} ${height}">

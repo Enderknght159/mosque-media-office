@@ -77,7 +77,18 @@ const Icons = (() => {
     'lock-open': '<rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8.5 10V7a3.5 3.5 0 0 1 6.7-1.4"/>',
     'check-square': '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="m7.5 12 3 3 6-6.5"/>',
     history: '<path d="M3 4v6h6"/><path d="M4.5 15a8 8 0 1 0 1.2-8.8L3 10"/><path d="M12 7.5V12l3 1.8"/>',
-    minus: '<path d="M5 12h14"/>'
+    minus: '<path d="M5 12h14"/>',
+    robot: '<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 5V8M9 3.5h6"/><circle cx="9" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.2" fill="currentColor" stroke="none"/><path d="M9.5 16.5h5M2 12v3M22 12v3"/>',
+    'folder-open': '<path d="M3 7.5A2 2 0 0 1 5 5.5h4l2 2.5h6a2 2 0 0 1 2 2v1"/><path d="M3 9.5h17.2a1.4 1.4 0 0 1 1.35 1.78l-1.6 6.2A2 2 0 0 1 18 19H5a2 2 0 0 1-2-2V9.5Z"/>',
+    dollar: '<path d="M12 3v18"/><path d="M16.5 7.2c-.8-1.2-2.4-2-4.3-2-2.6 0-4.4 1.3-4.4 3.2 0 4.4 9.4 2.3 9.4 6.6 0 2-2 3.4-4.8 3.4-2.1 0-3.9-.9-4.8-2.2"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2.5"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0-2.6 6.3"/><path d="M20 4.5V11h-6.4"/>',
+    activity: '<path d="M3 12h3.5l2.5-6.5 4 13 2.5-6.5H21"/>',
+    cpu: '<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
+    terminal: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 10 3 2.5L7 15M12.5 15.5H17"/>',
+    external: '<path d="M13 4h7v7"/><path d="M20 4 10 14"/><path d="M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>',
+    wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16.5 14.5h1.5"/>',
+    send: '<path d="m21 3-9.5 18-2.3-6.2L3 12.5 21 3Z"/>'
   };
 
   function svg(name, size = 20, cls = '') {
