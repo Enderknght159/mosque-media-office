@@ -3,6 +3,7 @@ const AutomationUI = (() => {
   const JOB_STATUS = {
     running: { label: 'يعمل الآن', color: 'var(--accent)' },
     queued: { label: 'في الانتظار', color: 'var(--text-3)' },
+    blocked: { label: 'بانتظار ردك', color: 'var(--orange)' },
     done: { label: 'اكتمل', color: 'var(--green)' },
     failed: { label: 'فشل', color: 'var(--red)' },
     cancelled: { label: 'أُلغي', color: 'var(--orange)' },
@@ -10,6 +11,12 @@ const AutomationUI = (() => {
   };
 
   const FINISHED_STATES = ['done', 'failed', 'cancelled', 'interrupted'];
+
+  // الرسالة الافتراضية التي تُرسل للوكيل عندما يسأله المستخدم عن موقعه
+  const PING_MESSAGE = 'أين وصلت الآن؟ اكتب في opencode/status.json المرحلة الحالية والنسبة والوقت المتبقي المتوقع، ثم أكمل العمل.';
+
+  const LIVE_POLL_MS = 2000;
+  const TICK_MS = 1000;
 
   const STARTER_PROMPTS = [
     {
@@ -67,6 +74,12 @@ const AutomationUI = (() => {
   // فلتر سجل التشغيلات محلي لهذه الوحدة — لا يلمس App.state
   let historyFilter = 'all';
 
+  // آخر معرّف جلسة معروف لكل تشغيل — يُستخدم للنسخ دون عرضه كنص كامل
+  const sessionIds = new Map();
+
+  // الجلسة المفتوحة حاليًا لنافذة تفاصيل التشغيل
+  let detailSession = null;
+
   // ---------------------------------------------------------------- helpers
   function opencode() {
     return window.Opencode || null;
@@ -120,40 +133,192 @@ const AutomationUI = (() => {
     return Math.max(0, Math.round((end.getTime() - start.getTime()) / 1000));
   }
 
-  function durationText(seconds) {
+  /** الوقت المتبقي بالكلمات، من عدد الثواني فقط. */
+  function etaText(seconds) {
     const total = Math.max(0, Math.round(Number(seconds) || 0));
-    if (total <= 0) return 'أقل من ثانية';
-    if (total < 60) return Utils.plural(total, 'ثانية', 'ثانيتين', 'ثوانٍ', 'ثانية');
-    const minutes = Math.floor(total / 60);
-    if (minutes < 60) return Utils.plural(minutes, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة');
-    const hours = Math.floor(minutes / 60);
-    const rest = minutes % 60;
+    if (total <= 0) return 'أقل من دقيقة';
+    if (total < 60) return 'أقل من دقيقة';
+    if (total < 3600) {
+      return Utils.plural(Math.round(total / 60), 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة');
+    }
+    const hours = Math.floor(total / 3600);
+    const rest = Math.round((total % 3600) / 60);
     const hoursText = Utils.plural(hours, 'ساعة', 'ساعتين', 'ساعات', 'ساعة');
-    return rest
-      ? `${hoursText} و${Utils.plural(rest, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة')}`
-      : hoursText;
+    return rest ? `${hoursText} و${Utils.plural(rest, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة')}` : hoursText;
   }
 
-  function etaText(job) {
-    if (!job || job.status === 'queued') return 'في الانتظار';
-    const seconds = Math.max(0, Math.round(Number(job.etaSeconds) || 0));
-    if (seconds <= 0) return 'جارٍ…';
-    if (seconds < 60) return 'متبقٍ أقل من دقيقة';
-    return `متبقٍ ~${Utils.plural(Math.round(seconds / 60), 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة')}`;
+  /** مدة رقمية مختصرة mm:ss أو h:mm:ss — تُعرض بأرقام جدولية. */
+  function elapsedText(seconds) {
+    const total = Math.max(0, Math.round(Number(seconds) || 0));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const rest = total % 60;
+    const pad = (value) => String(value).padStart(2, '0');
+    return hours ? `${hours}:${pad(minutes)}:${pad(rest)}` : `${pad(minutes)}:${pad(rest)}`;
+  }
+
+  function percentOf(value) {
+    return Utils.clamp(Math.round(Number(value) || 0), 0, 100);
+  }
+
+  /** حالة العرض الفعلية: status.json قد تكشف blocked قبل أن يحدّثها التشغيل. */
+  function liveState(job, live) {
+    const state = live?.state;
+    if (state === 'blocked') return 'blocked';
+    if (state === 'working' && isActiveJob(job)) return 'running';
+    if (state === 'done') return 'done';
+    if (state === 'failed') return 'failed';
+    return job?.status || 'queued';
+  }
+
+  function stateChip(state) {
+    const status = JOB_STATUS[state] || JOB_STATUS.queued;
+    const pulsing = state === 'running' || state === 'queued' || state === 'blocked';
+    return `<span class="automation-status ${pulsing ? 'is-running' : ''}" style="--automation-color:${status.color}"><i></i>${Utils.esc(status.label)}</span>`;
   }
 
   function statusChip(job) {
-    const status = JOB_STATUS[job?.status] || JOB_STATUS.queued;
-    return `<span class="automation-status ${isActiveJob(job) ? 'is-running' : ''}" style="--automation-color:${status.color}"><i></i>${Utils.esc(status.label)}</span>`;
+    return stateChip(liveState(job, null));
   }
 
-  function usageItem(label, value, isCost = false) {
-    const content = isCost ? formatCost(value) : Utils.formatNumber(value);
-    return `
-      <div class="automation-usage-item ${isCost ? 'is-cost' : ''}">
-        <span>${Utils.esc(label)}</span>
-        <strong>${Utils.esc(content)}</strong>
-      </div>`;
+  /** نص المرحلة: من status.json أولًا، ثم من سجل التشغيل. */
+  function phaseText(job, live) {
+    const fromLive = String(live?.phase || '').trim();
+    if (fromLive) return fromLive;
+    const fromJob = String(job?.phase || '').trim();
+    if (fromJob) return fromJob;
+    if (!job) return '—';
+    if (job.status === 'queued') return 'في الانتظار';
+    if (job.status === 'done') return 'اكتمل';
+    if (job.status === 'failed') return 'فشل';
+    if (job.status === 'cancelled') return 'أُلغي';
+    if (job.status === 'interrupted') return 'توقف';
+    return 'جارٍ التنفيذ';
+  }
+
+  /** معرّف الجلسة المقنّع: بادئة ثابتة + آخر ستة أحرف فقط. */
+  function shortSession(id) {
+    const value = String(id || '').trim();
+    if (!value) return '';
+    return `ses_…${value.slice(-6)}`;
+  }
+
+  async function copyText(text) {
+    const value = String(text || '');
+    if (!value) return false;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch (error) {}
+    try {
+      const area = document.createElement('textarea');
+      area.value = value;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.top = '-1000px';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const done = document.execCommand('copy');
+      area.remove();
+      return Boolean(done);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function numberOrNull(value) {
+    if (value == null || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function firstText(...values) {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+    return '';
+  }
+
+  function mergedUsage(...sources) {
+    const keys = ['input', 'output', 'reasoning', 'cacheRead', 'cacheWrite', 'costUSD'];
+    const result = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, costUSD: 0 };
+    keys.forEach((key) => {
+      result[key] = sources.reduce((max, source) => {
+        const value = Number(source?.[key]) || 0;
+        return value > max ? value : max;
+      }, 0);
+    });
+    return result;
+  }
+
+  /**
+   * status.json خاص بمجلد المهمة، وقد يبقى من تشغيل أقدم.
+   * نتجاهل بياناته عندما يكون وقت تحديثه خارج نطاق عمر التشغيل الحالي.
+   */
+  function statusIsFresh(job, updatedAt) {
+    const updated = stamp(updatedAt);
+    const started = stamp(job?.startedAt);
+    if (!updated || !started) return true;
+    const ended = stamp(job?.endedAt);
+    const lower = started.getTime() - 5000;
+    const upper = ended ? ended.getTime() + 120000 : Date.now() + 120000;
+    return updated.getTime() >= lower && updated.getTime() <= upper;
+  }
+
+  /** يوحد شكل بيانات job مع استجابة status.json في كائن واحد للعرض. */
+  function normalizeLive(job, payload) {
+    const data = payload && typeof payload === 'object'
+      ? (payload.data && typeof payload.data === 'object' ? payload.data : payload)
+      : {};
+    const agent = data.agentStatus && typeof data.agentStatus === 'object'
+      ? data.agentStatus
+      : (data.status && typeof data.status === 'object' && data.status.state ? data.status : null);
+    const run = data.run && typeof data.run === 'object' ? data.run : null;
+    const updatedAt = firstText(agent?.updatedAt, data.updatedAt);
+    const fresh = statusIsFresh(job, updatedAt);
+    // بيانات العملية الحية في main تصل مباشرة في data (progress/steps/usage/sessionID)
+    const liveProgress = numberOrNull(data.progress);
+    const hasLive = liveProgress != null
+      || numberOrNull(data.steps) != null
+      || Boolean(data.sessionID)
+      || Boolean(data.status);
+    const trustAgent = fresh || !agent;
+
+    const statusPercent = fresh ? numberOrNull(agent?.percent) : null;
+    const jobPercent = percentOf(job?.progress);
+    let percent = liveProgress != null ? percentOf(liveProgress) : jobPercent;
+    if (liveProgress == null && statusPercent != null) percent = percentOf(statusPercent);
+    if (isActiveJob(job)) percent = Math.max(jobPercent, percent);
+    else percent = job?.status === 'done' ? 100 : jobPercent;
+
+    const statusEta = fresh
+      ? (numberOrNull(agent?.etaSeconds) ?? numberOrNull(data.etaSeconds))
+      : (hasLive ? numberOrNull(data.etaSeconds) : null);
+    const etaSeconds = Math.max(0, Math.round(statusEta == null ? (numberOrNull(job?.etaSeconds) || 0) : statusEta));
+    const outputs = fresh && Array.isArray(agent?.outputs) ? agent.outputs : [];
+    const sessionID = firstText(job?.sessionID, run?.sessionID, data.sessionID);
+    if (job?.id && sessionID) sessionIds.set(job.id, sessionID);
+
+    return {
+      reached: Boolean(payload),
+      state: trustAgent ? firstText(agent?.state, data.state) : '',
+      phase: trustAgent ? firstText(agent?.phase, data.phase) : '',
+      percent,
+      etaSeconds,
+      message: trustAgent ? firstText(agent?.message, data.message) : '',
+      outputs: outputs.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 80),
+      updatedAt,
+      usage: mergedUsage(job?.usage, run?.usage, data.usage),
+      steps: Math.max(0, Math.round(Math.max(
+        numberOrNull(job?.steps) || 0,
+        numberOrNull(run?.steps) || 0,
+        numberOrNull(data.steps) || 0
+      ))),
+      sessionID
+    };
   }
 
   function formError(form, message) {
@@ -222,9 +387,11 @@ const AutomationUI = (() => {
   function bindLog(layer, job) {
     const logEl = layer.querySelector('.automation-log');
     if (!logEl) return () => {};
+    const details = logEl.closest('details');
     let stopped = false;
     let timer = null;
     const load = async () => {
+      if (stopped) return;
       const text = await fetchLogText(job.id, 400);
       if (stopped) return;
       if (text === null) {
@@ -238,7 +405,14 @@ const AutomationUI = (() => {
       logEl.scrollTop = logEl.scrollHeight;
     };
     load();
-    layer.querySelector('[data-log-refresh]')?.addEventListener('click', load);
+    layer.querySelector('[data-log-refresh]')?.addEventListener('click', () => {
+      load();
+    });
+    if (details) {
+      details.addEventListener('toggle', () => {
+        if (details.open) load();
+      });
+    }
     if (isActiveJob(job)) {
       timer = setInterval(() => {
         if (stopped || !layer.isConnected) {
@@ -246,14 +420,18 @@ const AutomationUI = (() => {
           timer = null;
           return;
         }
+        // لا نقرأ السجل إلا عندما يكون مفتوحًا لتقليل ضغط IPC
+        if (details && !details.open) return;
         load();
       }, 2500);
     }
-    return () => {
+    const cleanup = () => {
       stopped = true;
       if (timer) clearInterval(timer);
       timer = null;
     };
+    cleanup.reload = load;
+    return cleanup;
   }
 
   // ------------------------------------------------------------------- page
@@ -302,14 +480,14 @@ const AutomationUI = (() => {
         ${Views.statCard({
           icon: 'activity',
           color: '#0a84ff',
-          label: 'تشغيلات جارية الآن',
+          label: 'جارٍ الآن',
           value: Utils.formatNumber(running.length),
-          note: `${Utils.formatNumber(runningNow)} قيد التنفيذ · ${Utils.formatNumber(queuedNow)} في الانتظار`
+          note: `${Utils.formatNumber(runningNow)} ينفّذ · ${Utils.formatNumber(queuedNow)} منتظر`
         })}
         ${Views.statCard({
           icon: 'history',
           color: '#6c63ff',
-          label: 'تشغيلات آخر 30 يومًا',
+          label: 'آخر 30 يومًا',
           value: Utils.formatNumber(stats.total),
           note: `${Utils.formatNumber(stats.done)} ناجح · ${Utils.formatNumber(stats.failed)} فاشل`
         })}
@@ -320,14 +498,14 @@ const AutomationUI = (() => {
           value: `${Utils.formatNumber(stats.successPct)}%`,
           note: stats.finished
             ? `من ${Utils.formatNumber(stats.finished)} تشغيل منتهٍ`
-            : 'لا توجد تشغيلات منتهية بعد'
+            : 'لا تشغيلات منتهية بعد'
         })}
         ${Views.statCard({
-          icon: 'wallet',
+          icon: 'dollar',
           color: '#ff9f0a',
-          label: 'تكلفة آخر 30 يومًا',
+          label: 'تكلفة 30 يومًا',
           value: formatCost(stats.costUSD),
-          note: `${Utils.formatNumber(tokensTotal)} توكن · متوسط ${formatCost(stats.avgCostUSD)} للتشغيل`
+          note: `${Utils.formatNumber(tokensTotal)} توكن · ${formatCost(stats.avgCostUSD)} متوسط`
         })}
       </div>
       <section class="card automation-active">
@@ -362,6 +540,16 @@ const AutomationUI = (() => {
         </div>
         <div class="table-wrap">
           <table class="data-table automation-history-table">
+            <colgroup>
+              <col class="automation-col-task">
+              <col class="automation-col-prompt">
+              <col class="automation-col-model">
+              <col class="automation-col-status">
+              <col class="automation-col-duration">
+              <col class="automation-col-cost">
+              <col class="automation-col-date">
+              <col class="automation-col-actions">
+            </colgroup>
             <thead>
               <tr>
                 <th>المهمة</th>
@@ -371,7 +559,7 @@ const AutomationUI = (() => {
                 <th>المدة</th>
                 <th>التكلفة</th>
                 <th>التاريخ</th>
-                <th></th>
+                <th class="automation-th-actions"><span class="sr-only">إجراءات</span></th>
               </tr>
             </thead>
             <tbody>
@@ -438,11 +626,19 @@ const AutomationUI = (() => {
       </section>`;
   }
 
+  function iconAction(name, action, title, attrs = '', extra = '') {
+    const label = Utils.esc(String(title));
+    return `<button class="icon-btn ${extra}" type="button" data-action="${action}" ${attrs} title="${label}" aria-label="${label}">${Icons.svg(name, 16)}</button>`;
+  }
+
   function runRow(job) {
     const status = JOB_STATUS[job.status] || JOB_STATUS.queued;
-    const progress = Utils.clamp(Number(job.progress) || 0, 0, 100);
-    const tokens = (Number(job.usage?.input) || 0) + (Number(job.usage?.output) || 0);
+    const progress = percentOf(job.progress);
+    const usage = mergedUsage(job, null);
+    const tokens = (Number(usage.input) || 0) + (Number(usage.output) || 0);
     const queued = job.status === 'queued';
+    const elapsed = jobDuration(job);
+    const eta = Math.max(0, Math.round(Number(job.etaSeconds) || 0));
     return `
       <article class="automation-run ${queued ? 'is-queued' : 'is-running'}" style="--automation-color:${status.color}">
         <div class="automation-run-head">
@@ -458,42 +654,47 @@ const AutomationUI = (() => {
           ${statusChip(job)}
         </div>
         <div class="automation-run-phase">
-          <span class="automation-phase">${Utils.esc(job.phase || (queued ? 'في الانتظار' : 'جارٍ التنفيذ'))}</span>
-          <span class="automation-eta">${queued ? Icons.svg('clock', 12) : Icons.svg('activity', 12)} ${Utils.esc(etaText(job))}</span>
+          <span class="automation-phase">${Utils.esc(phaseText(job, null))}</span>
+          <span class="automation-run-timing">
+            <span class="automation-timing-item" title="الوقت المنقضي">${Icons.svg('timer', 12)}${Utils.esc(elapsedText(elapsed))}</span>
+            <span class="automation-timing-item" title="الوقت المتبقي المتوقع">${Icons.svg('clock', 12)}${queued ? 'في الانتظار' : Utils.esc(eta > 0 ? etaText(eta) : 'جارٍ…')}</span>
+          </span>
         </div>
         <div class="automation-run-progress">
           ${Views.progressBar(progress, queued ? 'var(--text-3)' : 'var(--accent)')}
           <span class="automation-percent">${Utils.formatNumber(progress)}%</span>
         </div>
         <div class="automation-run-stats">
-          <span>${Icons.svg('clock', 12)} ${Utils.esc(durationText(jobDuration(job)))}</span>
-          <span>${Icons.svg('cpu', 12)} ${Utils.formatNumber(tokens)} توكن</span>
-          <span>${Icons.svg('wallet', 12)} ${formatCost(job.usage?.costUSD)}</span>
+          <span title="عدد الخطوات">${Icons.svg('activity', 12)}${Utils.formatNumber(job.steps || 0)}</span>
+          <span title="التوكنات">${Icons.svg('cpu', 12)}${Utils.formatNumber(tokens)}</span>
+          <span title="التكلفة">${Icons.svg('wallet', 12)}${formatCost(usage.costUSD)}</span>
         </div>
-        <div class="automation-run-actions">
-          <button class="btn secondary sm" data-action="open-job" data-job-id="${Utils.esc(job.id)}">${Icons.svg('activity', 14)} تفاصيل</button>
-          <button class="btn ghost sm" data-action="open-job-log" data-job-id="${Utils.esc(job.id)}">${Icons.svg('terminal', 14)} السجل</button>
-          <button class="btn ghost sm" data-action="open-job-output" data-task-id="${Utils.esc(job.taskId)}">${Icons.svg('folder-open', 14)} فتح مجلد المخرجات</button>
-          <button class="btn ghost sm danger-text" data-action="cancel-automation" data-job-id="${Utils.esc(job.id)}">${Icons.svg('stop', 14)} إلغاء</button>
+        <div class="automation-run-actions icon-actions">
+          ${iconAction('activity', 'open-job', 'تفاصيل التشغيل', `data-job-id="${Utils.esc(job.id)}"`)}
+          ${iconAction('terminal', 'open-job-log', 'سجل التشغيل', `data-job-id="${Utils.esc(job.id)}"`)}
+          ${iconAction('folder-open', 'open-job-output', 'فتح مجلد المخرجات', `data-task-id="${Utils.esc(job.taskId)}"`)}
+          ${iconAction('stop', 'cancel-automation', 'إلغاء التشغيل', `data-job-id="${Utils.esc(job.id)}"`, 'is-danger')}
         </div>
       </article>`;
   }
 
   function historyRow(job) {
     const when = job.endedAt || job.startedAt;
+    const model = job.model || '';
     return `
       <tr>
-        <td>
+        <td class="automation-cell-task">
           <button class="automation-task-link" data-action="open-task" data-task-id="${Utils.esc(job.taskId)}" title="فتح المهمة">${Utils.esc(job.taskTitle || 'مهمة محذوفة')}</button>
         </td>
         <td class="automation-prompt-cell" title="${Utils.esc(job.promptName || 'برومت مخصص')}">${Utils.esc(job.promptName || 'برومت مخصص')}</td>
-        <td class="automation-model-cell" dir="ltr" title="${Utils.esc(job.model || '')}">${Utils.esc(job.model || '—')}</td>
-        <td>${statusChip(job)}</td>
-        <td>${Utils.esc(durationText(jobDuration(job)))}</td>
-        <td>${formatCost(job.usage?.costUSD)}</td>
-        <td class="muted-cell" title="${Utils.esc(Utils.fmtDateTime(when))}">${Utils.esc(when ? Utils.relativeTime(when) : '—')}</td>
-        <td>
-          <button class="icon-btn xs" data-action="open-job" data-job-id="${Utils.esc(job.id)}" title="تفاصيل التشغيل" aria-label="تفاصيل التشغيل">${Icons.svg('info', 15)}</button>
+        <td class="automation-cell-model" dir="ltr" title="${Utils.esc(model)}">${Utils.esc(model || '—')}</td>
+        <td class="automation-cell-status">${Views.automationStatusChip(job.status)}</td>
+        <td class="automation-cell-num">${Utils.esc(Views.formatDuration(jobDuration(job)))}</td>
+        <td class="automation-cell-num">${formatCost(job.usage?.costUSD)}</td>
+        <td class="muted-cell automation-cell-date" title="${Utils.esc(Utils.fmtDateTime(when))}">${Utils.esc(when ? Utils.relativeTime(when) : '—')}</td>
+        <td class="automation-cell-actions">
+          <button class="icon-btn xs" type="button" data-action="open-job" data-job-id="${Utils.esc(job.id)}" title="تفاصيل التشغيل" aria-label="تفاصيل التشغيل">${Icons.svg('info', 15)}</button>
+          <button class="icon-btn xs" type="button" data-action="open-job-log" data-job-id="${Utils.esc(job.id)}" title="سجل التشغيل" aria-label="سجل التشغيل">${Icons.svg('terminal', 15)}</button>
         </td>
       </tr>`;
   }
@@ -510,10 +711,10 @@ const AutomationUI = (() => {
         </div>
         <p class="automation-prompt-desc ${prompt.description ? '' : 'is-empty'}">${Utils.esc(prompt.description || 'بدون وصف.')}</p>
         <pre class="automation-prompt-excerpt">${Utils.esc(promptExcerpt(prompt.content))}</pre>
-        <div class="automation-prompt-actions">
-          <button class="btn ghost sm" data-action="edit-prompt" data-prompt-id="${Utils.esc(prompt.id)}">${Icons.svg('edit', 14)} تعديل</button>
-          <button class="btn ghost sm" data-action="duplicate-prompt" data-prompt-id="${Utils.esc(prompt.id)}">${Icons.svg('copy', 14)} تكرار</button>
-          <button class="btn ghost sm danger-text" data-action="delete-prompt" data-prompt-id="${Utils.esc(prompt.id)}">${Icons.svg('trash', 14)} حذف</button>
+        <div class="automation-prompt-actions icon-actions">
+          ${iconAction('edit', 'edit-prompt', 'تعديل البرومت', `data-prompt-id="${Utils.esc(prompt.id)}"`, 'sm')}
+          ${iconAction('copy', 'duplicate-prompt', 'تكرار البرومت', `data-prompt-id="${Utils.esc(prompt.id)}"`, 'sm')}
+          ${iconAction('trash', 'delete-prompt', 'حذف البرومت', `data-prompt-id="${Utils.esc(prompt.id)}"`, 'sm is-danger')}
         </div>
       </article>`;
   }
@@ -867,64 +1068,486 @@ const AutomationUI = (() => {
     openOwnJobLog(job);
   }
 
-  function openOwnJobDetail(job) {
-    const usage = job.usage || {};
-    const isActive = isActiveJob(job);
-    const body = `
-      <div class="automation-job">
-        <div class="automation-job-head">
-          ${statusChip(job)}
-          <span class="chip">${Icons.svg('cpu', 12)} ${Utils.esc(job.model || 'موديل غير محدد')}</span>
-          <span class="chip">${Icons.svg('terminal', 12)} ${Utils.esc(job.promptName || 'برومت مخصص')}</span>
-        </div>
-        <div class="automation-job-meta">
-          <div class="automation-job-meta-item"><span>المهمة</span><strong>${Utils.esc(job.taskTitle || 'مهمة محذوفة')}</strong></div>
-          <div class="automation-job-meta-item"><span>المجموعة</span><strong>${Utils.esc(job.groupName || 'بدون مجموعة')}</strong></div>
-          <div class="automation-job-meta-item"><span>المرحلة</span><strong>${Utils.esc(job.phase || (isActive ? 'جارٍ التنفيذ' : '—'))}</strong></div>
-          <div class="automation-job-meta-item"><span>البدء</span><strong>${Utils.esc(Utils.fmtDateTime(job.startedAt))}</strong></div>
-          <div class="automation-job-meta-item"><span>الانتهاء</span><strong>${job.endedAt ? Utils.esc(Utils.fmtDateTime(job.endedAt)) : (isActive ? 'لم ينتهِ بعد' : '—')}</strong></div>
-          <div class="automation-job-meta-item"><span>المدة</span><strong>${Utils.esc(durationText(jobDuration(job)))}</strong></div>
-        </div>
-        <div class="automation-usage">
-          ${usageItem('توكن الإدخال', usage.input)}
-          ${usageItem('توكن الإخراج', usage.output)}
-          ${usageItem('قراءة الكاش', usage.cacheRead)}
-          ${usageItem('كتابة الكاش', usage.cacheWrite)}
-          ${usageItem('التكلفة', usage.costUSD, true)}
-        </div>
-        ${job.error ? `<div class="automation-job-error">${Icons.svg('alert', 16)}<p>${Utils.esc(job.error)}</p></div>` : ''}
-        <div class="automation-log-wrap">
-          <div class="automation-log-head">
-            <span>${Icons.svg('terminal', 13)} سجل التشغيل${isActive ? ' المباشر' : ''}</span>
-            <button type="button" class="text-link" data-log-refresh>${Icons.svg('refresh', 13)} تحديث</button>
+  // ------------------------------------------------------- تفاصيل التشغيل
+  function setHtml(layer, selector, html) {
+    const node = layer ? layer.querySelector(selector) : null;
+    if (node) node.innerHTML = html;
+  }
+
+  function setText(layer, selector, text) {
+    const node = layer ? layer.querySelector(selector) : null;
+    if (node) node.textContent = text;
+  }
+
+  async function taskAbsolute(job) {
+    const module = repo();
+    if (!module || !job) return '';
+    try {
+      if (typeof module.absolute === 'function') {
+        const value = await module.absolute(job.taskId);
+        if (value) return String(value);
+      }
+      if (typeof module.abs === 'function') {
+        const value = await module.abs(job.taskId);
+        if (value) return String(value);
+      }
+    } catch (error) {}
+    return '';
+  }
+
+  /** بديل احتياطي لقراءة status.json عندما لا يكون Opencode.refresh متاحًا بعد. */
+  async function fallbackLive(job) {
+    const api = window.MMO?.opencode;
+    if (!api || typeof api.status !== 'function') return null;
+    const absolute = await taskAbsolute(job);
+    const payload = {
+      jobId: job.id,
+      taskFolder: absolute || job.taskFolder || '',
+      repoPath: window.Repo?.status?.()?.path || Data.get()?.settings?.repo?.path || ''
+    };
+    if (!payload.taskFolder && !payload.repoPath) return null;
+    try {
+      const result = await api.status(payload);
+      if (!result || result.ok === false) return null;
+      const data = result.data || {};
+      return { ok: true, data: { ...data, agentStatus: data.agentStatus || data.status || null } };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async function requestLive(job) {
+    if (!job) return null;
+    const module = opencode();
+    if (module && typeof module.refresh === 'function') {
+      try {
+        const result = await module.refresh(job.id);
+        if (result && result.ok !== false) return normalizeLive(job, result);
+      } catch (error) {}
+    }
+    const fallback = await fallbackLive(job);
+    return fallback ? normalizeLive(job, fallback) : null;
+  }
+
+  function statTile({ key = '', icon, value, label, title, tone = '' }) {
+    return `
+      <div class="automation-live-stat ${tone}" ${key ? `data-live-stat="${key}"` : ''} title="${Utils.esc(title)}">
+        <span class="automation-live-stat-icon">${Icons.svg(icon, 15)}</span>
+        <strong>${Utils.esc(value)}</strong>
+        <span class="automation-live-stat-label">${Utils.esc(label)}</span>
+      </div>`;
+  }
+
+  function liveStatsMarkup(job, live) {
+    const usage = live?.usage || mergedUsage(job, null);
+    const cached = (Number(usage.cacheRead) || 0) + (Number(usage.cacheWrite) || 0);
+    const steps = Number(live?.steps ?? job?.steps) || 0;
+    return [
+      statTile({
+        icon: 'arrow-down',
+        value: Utils.formatNumber(usage.input || 0),
+        label: 'إدخال',
+        title: 'توكنات الإدخال المرسلة إلى الموديل.'
+      }),
+      statTile({
+        icon: 'arrow-up',
+        value: Utils.formatNumber(usage.output || 0),
+        label: 'إخراج',
+        title: 'توكنات الإخراج التي أنتجها الموديل.'
+      }),
+      statTile({
+        icon: 'database',
+        value: Utils.formatNumber(cached),
+        label: 'كاش',
+        title: 'التوكنات المقروءة من الكاش والمكتوبة إليه.'
+      }),
+      statTile({
+        icon: 'dollar',
+        value: formatCost(usage.costUSD),
+        label: 'التكلفة',
+        title: 'التكلفة التقديرية بالدولار لكل استدعاءات الموديل.',
+        tone: 'is-cost'
+      }),
+      statTile({
+        icon: 'activity',
+        value: Utils.formatNumber(steps),
+        label: 'خطوة',
+        title: 'عدد الخطوات التي نفّذها الوكيل حتى الآن.'
+      }),
+      statTile({
+        key: 'duration',
+        icon: 'timer',
+        value: Views.formatDuration(jobDuration(job)),
+        label: 'المدة',
+        title: 'الوقت المنقضي منذ بدء التشغيل.'
+      })
+    ].join('');
+  }
+
+  function renderLiveStats(layer, job, live) {
+    const host = layer ? layer.querySelector('[data-live-stats]') : null;
+    if (!host) return;
+    const markup = liveStatsMarkup(job, live);
+    if (host.__liveKey === markup) return;
+    host.__liveKey = markup;
+    host.innerHTML = markup;
+  }
+
+  function sessionMarkup(job, live) {
+    const id = firstText(live?.sessionID, sessionIds.get(job?.id), job?.sessionID);
+    if (!id) return '';
+    return `
+      <span class="automation-session-label">${Icons.svg('hash', 14)}<span>معرف الجلسة</span></span>
+      <code class="automation-session-value" dir="ltr">${Utils.esc(shortSession(id))}</code>
+      <button class="icon-btn xs" type="button" data-action="job-copy-session" data-job-id="${Utils.esc(job.id)}" title="نسخ معرف الجلسة" aria-label="نسخ معرف الجلسة">${Icons.svg('copy', 14)}</button>`;
+  }
+
+  function renderSession(layer, job, live) {
+    const host = layer ? layer.querySelector('[data-live-session]') : null;
+    if (!host) return;
+    const markup = sessionMarkup(job, live);
+    if (host.__liveKey === markup) return;
+    host.__liveKey = markup;
+    host.hidden = !markup;
+    host.innerHTML = markup;
+  }
+
+  function outputsMarkup(job, live) {
+    const outputs = Array.isArray(live?.outputs) ? live.outputs : [];
+    if (!outputs.length) return '';
+    const chips = outputs.map((path) => `
+      <button class="automation-output-chip" type="button" data-action="open-job-output" data-task-id="${Utils.esc(job.taskId)}" title="${Utils.esc(path)}">
+        ${Icons.svg('file', 13)}<span dir="ltr">${Utils.esc(path)}</span>
+      </button>`).join('');
+    return `<span class="automation-outputs-title">${Icons.svg('folder-open', 13)}<span>المخرجات</span></span><div class="automation-outputs-list">${chips}</div>`;
+  }
+
+  function renderOutputs(layer, job, live) {
+    const host = layer ? layer.querySelector('[data-live-outputs]') : null;
+    if (!host) return;
+    const markup = outputsMarkup(job, live);
+    if (host.__liveKey === markup) return;
+    host.__liveKey = markup;
+    host.hidden = !markup;
+    host.innerHTML = markup;
+  }
+
+  function renderBlocked(layer, live) {
+    const host = layer ? layer.querySelector('[data-live-blocked]') : null;
+    if (!host) return;
+    if (live?.state !== 'blocked') {
+      if (host.hidden) return;
+      host.hidden = true;
+      host.__liveKey = '';
+      host.innerHTML = '';
+      return;
+    }
+    const question = String(live.message || '').trim() || 'أوقف الوكيل العمل وينتظر ردًا منك على سؤال لم يُكتب بعد.';
+    const markup = `
+      ${Icons.svg('alert', 18)}
+      <div>
+        <strong>الوكيل ينتظر قرارك</strong>
+        <p>${Utils.esc(question)}</p>
+        <span class="automation-blocked-hint">التشغيل متوقف حتى تردّ على السؤال.</span>
+      </div>`;
+    if (host.__liveKey === markup) return;
+    host.__liveKey = markup;
+    host.hidden = false;
+    host.innerHTML = markup;
+  }
+
+  function errorMarkup(job, live) {
+    const message = live?.state === 'blocked' ? '' : String(job?.error || '').trim();
+    return message ? `${Icons.svg('alert', 16)}<p>${Utils.esc(message)}</p>` : '';
+  }
+
+  function renderError(layer, job, live) {
+    const host = layer ? layer.querySelector('[data-live-error]') : null;
+    if (!host) return;
+    const markup = errorMarkup(job, live);
+    if (host.__liveKey === markup) return;
+    host.__liveKey = markup;
+    host.hidden = !markup;
+    host.innerHTML = markup;
+  }
+
+  function footerMarkup(job, active) {
+    const jobId = Utils.esc(job.id);
+    const taskId = Utils.esc(job.taskId);
+    const hasSession = Boolean(sessionIds.get(job.id) || job.sessionID);
+    return `
+      <button class="icon-btn" type="button" data-action="job-refresh" data-job-id="${jobId}" title="تحديث الآن" aria-label="تحديث الآن">${Icons.svg('refresh', 17)}</button>
+      ${active ? `<button class="icon-btn" type="button" data-action="job-ping" data-job-id="${jobId}" title="اسأل الوكيل عن موقعه" aria-label="اسأل الوكيل عن موقعه">${Icons.svg('send', 17)}</button>` : ''}
+      ${active
+        ? `<button class="icon-btn is-danger" type="button" data-action="cancel-automation" data-job-id="${jobId}" title="إيقاف التشغيل" aria-label="إيقاف التشغيل">${Icons.svg('stop', 17)}</button>`
+        : `<button class="icon-btn" type="button" data-action="job-restart" data-job-id="${jobId}" title="إعادة التشغيل" aria-label="إعادة التشغيل">${Icons.svg('power', 17)}</button>`}
+      <button class="icon-btn" type="button" data-action="open-job-output" data-task-id="${taskId}" title="مجلد المخرجات" aria-label="مجلد المخرجات">${Icons.svg('folder-open', 17)}</button>
+      <button class="icon-btn" type="button" data-action="open-job-opencode" data-task-id="${taskId}" title="مجلد opencode" aria-label="مجلد opencode">${Icons.svg('terminal', 17)}</button>
+      ${hasSession ? `<button class="icon-btn" type="button" data-action="job-copy-session" data-job-id="${jobId}" title="نسخ معرف الجلسة" aria-label="نسخ معرف الجلسة">${Icons.svg('copy', 17)}</button>` : ''}
+      <span class="automation-footer-spacer"></span>
+      <button class="btn primary" type="button" data-close-modal>إغلاق</button>`;
+  }
+
+  function renderFooterActions(layer, job) {
+    const host = layer ? layer.querySelector('[data-live-footer]') : null;
+    if (!host) return;
+    host.innerHTML = footerMarkup(job, isActiveJob(job));
+  }
+
+  function metaRow(icon, label, valueHtml) {
+    return `
+      <div class="automation-meta-row">
+        <dt>${Icons.svg(icon, 14)}<span>${Utils.esc(label)}</span></dt>
+        <dd>${valueHtml}</dd>
+      </div>`;
+  }
+
+  function jobDetailBody(job, live) {
+    const active = isActiveJob(job);
+    const percent = percentOf(live.percent);
+    const model = job.model || '';
+    const started = job.startedAt ? Utils.fmtDateTime(job.startedAt) : '';
+    const ended = job.endedAt ? Utils.fmtDateTime(job.endedAt) : '';
+    const session = sessionMarkup(job, live);
+    const error = errorMarkup(job, live);
+    const outputs = outputsMarkup(job, live);
+    const eta = Math.max(0, Math.round(Number(live.etaSeconds) || 0));
+    return `
+      <div class="automation-job" data-job-detail>
+        <section class="automation-job-hero ${active ? 'is-live' : ''}">
+          <div class="automation-hero-top">
+            <span data-live-chip>${stateChip(liveState(job, live))}</span>
+            <span class="automation-hero-updated" data-live-updated>${live.updatedAt ? `${Icons.svg('refresh', 11)}<span>${Utils.esc(Utils.relativeTime(live.updatedAt))}</span>` : ''}</span>
           </div>
-          <pre class="automation-log" id="automation-job-log">جارٍ تحميل السجل…</pre>
-        </div>
+          <h3 class="automation-hero-phase" data-live-phase>${Utils.esc(phaseText(job, live))}</h3>
+          <div class="automation-hero-progress">
+            <span class="automation-hero-bar" data-live-bar>${Views.progressBar(percent, active ? 'var(--accent)' : (job.status === 'failed' ? 'var(--red)' : 'var(--green)'))}</span>
+            <span class="automation-hero-percent" data-live-percent>${Utils.formatNumber(percent)}%</span>
+          </div>
+          <div class="automation-hero-meta">
+            <span data-live-elapsed>${Icons.svg('timer', 12)}<span title="الوقت المنقضي">${Utils.esc(elapsedText(jobDuration(job)))}</span></span>
+            <span data-live-eta ${active ? '' : 'hidden'}>${Icons.svg('clock', 12)}<span title="الوقت المتبقي المتوقع">${eta > 0 ? `متبقٍ ${Utils.esc(etaText(eta))}` : 'جارٍ…'}</span></span>
+            <span data-live-steps>${Icons.svg('activity', 12)}<span title="عدد الخطوات">${Utils.formatNumber(live.steps || 0)}</span></span>
+            <span data-live-ended ${!active && job.endedAt ? '' : 'hidden'}>${Icons.svg('flag', 12)}<span>${job.endedAt ? `انتهى ${Utils.esc(Utils.relativeTime(job.endedAt))}` : ''}</span></span>
+          </div>
+        </section>
+        <div class="automation-live-stats" data-live-stats>${liveStatsMarkup(job, live)}</div>
+        <dl class="automation-meta-list">
+          ${metaRow('tasks', 'المهمة', `<strong>${Utils.esc(job.taskTitle || 'مهمة محذوفة')}</strong>`)}
+          ${metaRow('layers', 'المجموعة', Utils.esc(job.groupName || 'بدون مجموعة'))}
+          ${metaRow('cpu', 'الموديل', `<span class="automation-meta-model" dir="ltr" title="${Utils.esc(model)}">${Utils.esc(model || '—')}</span>`)}
+          ${metaRow('terminal', 'البرومت', Utils.esc(job.promptName || 'برومت مخصص'))}
+          ${metaRow('calendar', 'البدء', Utils.esc(started || '—'))}
+          ${metaRow('clock', 'الانتهاء', Utils.esc(active && !ended ? 'لم ينتهِ بعد' : (ended || '—')))}
+        </dl>
+        <div class="automation-session-row" data-live-session ${session ? '' : 'hidden'}>${session}</div>
+        <div class="automation-outputs" data-live-outputs ${outputs ? '' : 'hidden'}>${outputs}</div>
+        <div class="automation-blocked-banner" data-live-blocked hidden></div>
+        <div class="automation-job-error" data-live-error ${error ? '' : 'hidden'}>${error}</div>
+        <details class="automation-log-details">
+          <summary class="automation-log-summary">
+            <span>${Icons.svg('terminal', 13)}<span>السجل${active ? ' المباشر' : ''}</span></span>
+            <span class="automation-log-hint">اضغط للعرض</span>
+          </summary>
+          <div class="automation-log-wrap">
+            <div class="automation-log-head">
+              <span>${Icons.svg('terminal', 13)} مخرجات opencode</span>
+              <button type="button" class="icon-btn xs" data-log-refresh title="تحديث السجل" aria-label="تحديث السجل">${Icons.svg('refresh', 13)}</button>
+            </div>
+            <pre class="automation-log" data-job-log>جارٍ تحميل السجل…</pre>
+          </div>
+        </details>
       </div>`;
-    const footer = `
-      <div class="modal-footer-row">
-        <div class="footer-left">
-          <button class="btn ghost sm" data-action="open-job-output" data-task-id="${Utils.esc(job.taskId)}">${Icons.svg('folder-open', 15)} مجلد المخرجات</button>
-          <button class="btn ghost sm" data-action="open-job-opencode" data-task-id="${Utils.esc(job.taskId)}">${Icons.svg('terminal', 15)} مجلد opencode</button>
+  }
+
+  function jobDetailFooter(job) {
+    return `
+      <div class="automation-ping-row" data-ping-row hidden>
+        <label class="automation-ping-label" for="automation-ping-text">${Icons.svg('message', 15)}<span>رسالة إلى الوكيل</span></label>
+        <textarea id="automation-ping-text" class="automation-ping-input" rows="2" maxlength="800" placeholder="اكتب ما تريد أن يخبرك به الوكيل أو ما يجب أن يفعله الآن.">${Utils.esc(PING_MESSAGE)}</textarea>
+        <div class="automation-ping-actions">
+          <button class="btn ghost sm" type="button" data-action="job-ping-cancel">إلغاء</button>
+          <button class="btn primary sm" type="button" data-action="job-ping-send" data-job-id="${Utils.esc(job.id)}">${Icons.svg('send', 15)} إرسال</button>
         </div>
-        <div class="footer-right">
-          ${isActive ? `<button class="btn ghost sm danger-text" data-action="cancel-automation" data-job-id="${Utils.esc(job.id)}">${Icons.svg('stop', 15)} إلغاء</button>` : ''}
-          <button class="btn primary" data-close-modal type="button">إغلاق</button>
-        </div>
-      </div>`;
-    let cleanup = null;
+      </div>
+      <div class="automation-footer-actions" data-live-footer>${footerMarkup(job, isActiveJob(job))}</div>`;
+  }
+
+  function updateElapsed(layer, job) {
+    if (!layer) return;
+    const seconds = jobDuration(job);
+    setHtml(layer, '[data-live-elapsed]', `${Icons.svg('timer', 12)}<span title="الوقت المنقضي">${Utils.esc(elapsedText(seconds))}</span>`);
+    const tile = layer.querySelector('[data-live-stat="duration"] strong');
+    if (tile) tile.textContent = Views.formatDuration(seconds);
+  }
+
+  /** يحدّث كل مناطق العرض الحي داخل النافذة دون إعادة رسم الجدول أو النافذة. */
+  function applyLive(session) {
+    const layer = session?.layer;
+    const job = session?.job;
+    const live = session?.live || normalizeLive(job, null);
+    if (!layer || !layer.isConnected || !job) return;
+    const active = isActiveJob(job);
+    const percent = percentOf(live.percent);
+
+    setHtml(layer, '[data-live-chip]', stateChip(liveState(job, live)));
+    setText(layer, '[data-live-phase]', phaseText(job, live));
+    setText(layer, '[data-live-percent]', `${Utils.formatNumber(percent)}%`);
+    setHtml(layer, '[data-live-updated]', live.updatedAt
+      ? `${Icons.svg('refresh', 11)}<span>${Utils.esc(Utils.relativeTime(live.updatedAt))}</span>`
+      : '');
+
+    const bar = layer.querySelector('[data-live-bar] .progress');
+    if (bar) {
+      bar.setAttribute('aria-valuenow', String(percent));
+      const fill = bar.firstElementChild;
+      if (fill) {
+        fill.style.width = `${percent}%`;
+        fill.style.background = active ? 'var(--accent)' : (job.status === 'failed' ? 'var(--red)' : 'var(--green)');
+      }
+    }
+
+    updateElapsed(layer, job);
+    const eta = Math.max(0, Math.round(Number(live.etaSeconds) || 0));
+    setHtml(layer, '[data-live-eta]', active
+      ? `${Icons.svg('clock', 12)}<span title="الوقت المتبقي المتوقع">${eta > 0 ? `متبقٍ ${Utils.esc(etaText(eta))}` : 'جارٍ…'}</span>`
+      : '');
+    const etaNode = layer.querySelector('[data-live-eta]');
+    if (etaNode) etaNode.hidden = !active;
+    setHtml(layer, '[data-live-steps]', `${Icons.svg('activity', 12)}<span title="عدد الخطوات">${Utils.formatNumber(live.steps || 0)}</span>`);
+    const endedNode = layer.querySelector('[data-live-ended]');
+    if (endedNode) {
+      endedNode.hidden = active || !job.endedAt;
+      setHtml(layer, '[data-live-ended]', job.endedAt
+        ? `${Icons.svg('flag', 12)}<span>انتهى ${Utils.esc(Utils.relativeTime(job.endedAt))}</span>`
+        : '');
+    }
+
+    const hero = layer.querySelector('.automation-job-hero');
+    if (hero) hero.classList.toggle('is-live', active);
+
+    renderBlocked(layer, live);
+    renderLiveStats(layer, job, live);
+    renderSession(layer, job, live);
+    renderOutputs(layer, job, live);
+    renderError(layer, job, live);
+
+    if (session.footerActive !== active || session.footerSession !== Boolean(live.sessionID)) {
+      session.footerActive = active;
+      session.footerSession = Boolean(live.sessionID);
+      renderFooterActions(layer, job);
+    }
+  }
+
+  function createDetailController(job, layer) {
+    const initialLive = normalizeLive(job, null);
+    const session = {
+      job,
+      layer,
+      live: initialLive,
+      footerActive: isActiveJob(job),
+      footerSession: Boolean(initialLive.sessionID),
+      closed: false,
+      busy: false,
+      timer: null,
+      ticker: null,
+      logCleanup: null
+    };
+
+    const syncJob = () => {
+      const fresh = Data.automation(job.id);
+      if (fresh) session.job = fresh;
+      return session.job;
+    };
+
+    function stop() {
+      if (session.timer) {
+        clearInterval(session.timer);
+        session.timer = null;
+      }
+      if (session.ticker) {
+        clearInterval(session.ticker);
+        session.ticker = null;
+      }
+    }
+
+    async function poll(manual = false) {
+      if (session.closed || !layer.isConnected) return null;
+      if (session.busy) return null;
+      session.busy = true;
+      syncJob();
+      const live = await requestLive(session.job);
+      session.busy = false;
+      if (session.closed || !layer.isConnected) return null;
+      if (live) {
+        session.live = live;
+        syncJob();
+        applyLive(session);
+        if (!isActiveJob(session.job)) {
+          stop();
+          session.live = session.live || live;
+        }
+      } else if (manual) {
+        applyLive(session);
+      }
+      return live;
+    }
+
+    session.refresh = poll;
+    session.stop = stop;
+
+    if (isActiveJob(job)) {
+      session.ticker = setInterval(() => {
+        if (session.closed || !layer.isConnected) {
+          stop();
+          return;
+        }
+        updateElapsed(layer, session.job);
+      }, TICK_MS);
+      session.timer = setInterval(() => {
+        if (session.closed || !layer.isConnected) {
+          stop();
+          return;
+        }
+        syncJob();
+        if (!isActiveJob(session.job)) {
+          poll(true).then(() => stop());
+          return;
+        }
+        poll(false);
+      }, LIVE_POLL_MS);
+    }
+
+    // قراءة أولى فورية (تجلب المخرجات للمنتهية وحالة status.json للجارية)
+    poll(false);
+    return session;
+  }
+
+  function openOwnJobDetail(job) {
+    const live = normalizeLive(job, null);
+    let controller = null;
+    detailSession = null;
     App.openModal({
       title: 'تفاصيل التشغيل',
       subtitle: job.taskTitle || 'مهمة محذوفة',
       eyebrow: 'الأتمتة',
-      body,
-      footer,
+      body: jobDetailBody(job, live),
+      footer: jobDetailFooter(job),
       size: 'lg',
       onMount: (layer) => {
-        cleanup = bindLog(layer, job);
+        const logCleanup = bindLog(layer, job);
+        controller = createDetailController(job, layer);
+        controller.logCleanup = logCleanup;
+        detailSession = controller;
+        applyLive(controller);
       },
       onDismiss: () => {
-        if (cleanup) cleanup();
+        if (controller) {
+          controller.stop();
+          if (typeof controller.logCleanup === 'function') controller.logCleanup();
+        }
+        if (detailSession === controller) detailSession = null;
+        controller = null;
       }
     });
   }
@@ -1010,6 +1633,9 @@ const AutomationUI = (() => {
     }
     App.refresh();
     App.toast('تم إلغاء التشغيل.', { type: 'success', icon: 'stop' });
+    if (detailSession && detailSession.job.id === jobId) {
+      detailSession.refresh(true);
+    }
   }
 
   function openTaskFolder(kind, taskId) {
@@ -1032,6 +1658,108 @@ const AutomationUI = (() => {
     }).catch(() => {
       App.toast(`تعذر فتح ${label}.`, { type: 'error' });
     });
+  }
+
+  // ------------------------------------------------------- live job actions
+  function refreshJobLive(jobId) {
+    const job = Data.automation(jobId);
+    if (!job) return Promise.resolve(null);
+    return requestLive(job).then((live) => {
+      if (live && detailSession && detailSession.job.id === jobId) {
+        detailSession.live = live;
+        applyLive(detailSession);
+      }
+      return live;
+    });
+  }
+
+  function copySessionId(jobId) {
+    const job = Data.automation(jobId);
+    const id = firstText(sessionIds.get(jobId), job?.sessionID);
+    if (!id) {
+      App.toast('لا يوجد معرّف جلسة لهذا التشغيل.', { type: 'info' });
+      return;
+    }
+    copyText(id).then((ok) => {
+      App.toast(ok ? 'تم نسخ معرف الجلسة.' : 'تعذر النسخ من هذا المتصفح.', {
+        type: ok ? 'success' : 'warning',
+        icon: ok ? 'copy' : 'alert'
+      });
+    });
+  }
+
+  async function sendPing(jobId, message) {
+    const job = Data.automation(jobId);
+    if (!job) {
+      App.toast('لم يتم العثور على هذا التشغيل.', { type: 'error' });
+      return;
+    }
+    const module = opencode();
+    if (!module || typeof module.ping !== 'function') {
+      App.toast('إرسال رسالة للوكيل يحتاج تطبيق سطح المكتب المحدّث.', { type: 'warning', duration: 4600 });
+      return;
+    }
+    const text = String(message || '').trim() || PING_MESSAGE;
+    let result = null;
+    try {
+      result = await module.ping(jobId, text);
+    } catch (error) {
+      App.toast('تعذر إرسال الرسالة إلى الوكيل.', { type: 'error' });
+      return;
+    }
+    // Opencode.ping يعرض تنبيه النجاح/الفشل بنفسه، فلا نكرره هنا.
+    if (result && result.ok === false) return;
+    const row = document.querySelector('[data-ping-row]');
+    if (row) row.hidden = true;
+    setTimeout(() => {
+      refreshJobLive(jobId);
+    }, 1500);
+  }
+
+  async function restartJob(jobId) {
+    const job = Data.automation(jobId);
+    if (!job) {
+      App.toast('لم يتم العثور على هذا التشغيل.', { type: 'error' });
+      return;
+    }
+    if (isActiveJob(job)) {
+      App.toast('التشغيل ما زال جاريًا. أوقفه أولًا ثم أعد تشغيله.', { type: 'warning' });
+      return;
+    }
+    const module = opencode();
+    if (!module || typeof module.restart !== 'function') {
+      App.toast('إعادة التشغيل تحتاج تطبيق سطح المكتب المحدّث.', { type: 'warning', duration: 4600 });
+      return;
+    }
+    const ok = await App.confirm({
+      title: 'إعادة تشغيل الأتمتة',
+      message: `سيبدأ تشغيل جديد لمهمة «${job.taskTitle || 'المهمة'}» بنفس البرومت والموديل، وقد تزيد التكلفة.`,
+      confirmText: 'إعادة التشغيل'
+    }).catch(() => false);
+    if (!ok) return;
+
+    let result = null;
+    try {
+      result = await module.restart(jobId);
+    } catch (error) {
+      App.toast('تعذر إعادة تشغيل الأتمتة.', { type: 'error' });
+      return;
+    }
+    if (result && result.ok === false) {
+      App.toast(result.message || 'تعذر إعادة تشغيل الأتمتة.', { type: 'error' });
+      return;
+    }
+    const newJobId = result?.job?.id || result?.data?.job?.id || jobId;
+    // Opencode.restart يعرض تنبيه البدء بنفسه
+    const session = detailSession;
+    if (session) session.stop();
+    if (session && session.layer && session.layer.isConnected) {
+      App.closeModal();
+    }
+    setTimeout(() => {
+      App.refresh();
+      openJobDetail(newJobId);
+    }, 320);
   }
 
   // ------------------------------------------------------------- handleAction
@@ -1073,6 +1801,51 @@ const AutomationUI = (() => {
           ? element.dataset.value
           : 'all';
         App.refresh();
+        return true;
+      case 'job-refresh': {
+        const jobId = element.dataset?.jobId;
+        const session = detailSession && detailSession.job.id === jobId ? detailSession : null;
+        const run = session ? session.refresh(true) : refreshJobLive(jobId);
+        Promise.resolve(run).then((live) => {
+          if (live) {
+            App.toast('تم تحديث حالة التشغيل.', { type: 'success', icon: 'refresh', duration: 1700 });
+          } else {
+            App.toast('تعذر قراءة حالة التشغيل الآن.', { type: 'warning', duration: 2600 });
+          }
+        });
+        return true;
+      }
+      case 'job-copy-session':
+        copySessionId(element.dataset?.jobId);
+        return true;
+      case 'job-ping': {
+        const row = element.closest('.modal-footer, .modal-sheet')?.querySelector('[data-ping-row]')
+          || document.querySelector('[data-ping-row]');
+        if (!row) return true;
+        const willOpen = row.hidden;
+        row.hidden = !willOpen;
+        if (willOpen) {
+          const input = row.querySelector('textarea');
+          if (input) {
+            input.focus({ preventScroll: true });
+            input.setSelectionRange(input.value.length, input.value.length);
+          }
+        }
+        return true;
+      }
+      case 'job-ping-cancel': {
+        const row = element.closest('[data-ping-row]');
+        if (row) row.hidden = true;
+        return true;
+      }
+      case 'job-ping-send': {
+        const row = element.closest('[data-ping-row]');
+        const text = row?.querySelector('textarea')?.value?.trim() || PING_MESSAGE;
+        sendPing(element.dataset?.jobId, text);
+        return true;
+      }
+      case 'job-restart':
+        restartJob(element.dataset?.jobId);
         return true;
       case 'seed-prompts':
         seedPrompts();

@@ -200,9 +200,17 @@ function resolveInside(repoRoot, relPath) {
 }
 
 function dateKey(value) {
+  const clean = String(value || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean.replace(/-/g, '');
   const parsed = value ? new Date(value) : new Date();
   const date = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+}
+
+function taskDateKey(task) {
+  const raw = String(task?.date || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw.replace(/-/g, '');
+  return dateKey(task?.createdAt);
 }
 
 // --------------------------------------------------------------- manifest
@@ -422,7 +430,7 @@ function syncRepo(payload = {}) {
     const rawGroupId = String(task?.groupId || '');
     const groupId = groupFolderById.has(rawGroupId) ? rawGroupId : '';
     const parentRel = groupId ? groupFolderById.get(groupId) : ensureNoGroupFolder();
-    const datePart = dateKey(task?.createdAt);
+    const datePart = taskDateKey(task);
     const desiredName = `${datePart} - ${sanitizeFolder(title)}`;
     const prev = manifest.tasks[id] && typeof manifest.tasks[id] === 'object' ? manifest.tasks[id] : {};
     let folder = safeRelPath(prev.folder);

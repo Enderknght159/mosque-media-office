@@ -82,7 +82,8 @@ const listDir = (relative) => {
     { id: 'task_1', title: 'إعلان الافتتاح', groupId: 'grp_1', createdAt: '2026-08-10T09:00:00.000Z' },
     { id: 'task_2', title: 'إعلان الافتتاح', groupId: 'grp_1', createdAt: '2026-08-11T09:00:00.000Z' },
     { id: 'task_3', title: 'كليب رمضان', groupId: 'grp_2', createdAt: '2026-03-05T09:00:00.000Z' },
-    { id: 'task_4', title: 'مادة بلا مجموعة', groupId: null, createdAt: '2026-04-05T09:00:00.000Z' }
+    { id: 'task_4', title: 'مادة بلا مجموعة', groupId: null, createdAt: '2026-04-05T09:00:00.000Z' },
+    { id: 'task_7', title: 'ليلة القدر', groupId: 'grp_2', date: '2026-12-24', createdAt: '2026-01-01T09:00:00.000Z' }
   ];
   const first = await call('repo:sync', { repoPath: repoDir, autoRename: true, groups, tasks });
   check('sync ok', first.ok === true, JSON.stringify(first).slice(0, 200));
@@ -92,6 +93,7 @@ const listDir = (relative) => {
   check('duplicate title deduped', map.task_2 === 'خطبة الجمعة\\20260811 - إعلان الافتتاح', map.task_2);
   check('second group folder', first.data.groups.grp_2 === 'إعلانات رمضان', first.data.groups.grp_2);
   check('task without group uses fallback folder', map.task_4.startsWith('بدون مجموعة\\'), map.task_4);
+  check('chosen task date wins over creation date', map.task_7 === 'إعلانات رمضان\\20261224 - ليلة القدر', map.task_7);
   check('output folder created', exists(path.join(map.task_1, 'output')));
   check('opencode folder created', exists(path.join(map.task_1, 'opencode')));
   check('opencode logs created', exists(path.join(map.task_1, 'opencode', 'logs')));

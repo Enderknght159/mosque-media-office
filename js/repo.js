@@ -143,6 +143,7 @@ const Repo = (() => {
           title: task.title,
           groupId: task.groupId || null,
           groupName: task.groupId ? (groupNames.get(task.groupId) || '') : '',
+          date: task.date || '',
           createdAt: task.createdAt || ''
         }))
       });

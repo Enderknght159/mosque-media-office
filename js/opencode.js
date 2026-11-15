@@ -447,6 +447,128 @@ const Opencode = (() => {
     }
   }
 
+  // ---------------------------------------------------------------- refresh / ping / restart
+
+  /**
+   * يقرأ حالة الوكيل من القرص (status.json + run-*.json + آخر السجل) دون أي كتابة.
+   * صامت افتراضيًا لأن الاستدعاء المتكرر (polling) لا يجب أن يزعج المستخدم.
+   * يعيد { ok:true, data } أو null عند الفشل.
+   */
+  async function refresh(jobId, { silent = true } = {}) {
+    if (!available()) {
+      if (!silent) toast('الأتمتة تحتاج تطبيق سطح المكتب.', { type: 'info' });
+      return null;
+    }
+    if (!jobId) return null;
+
+    const job = currentJob(jobId);
+    const taskId = String(job?.taskId || '').trim();
+    let absolute = '';
+    try {
+      if (taskId && typeof Repo !== 'undefined' && typeof Repo.abs === 'function') {
+        absolute = String(Repo.abs(taskId) || '');
+      }
+    } catch (error) {
+      absolute = '';
+    }
+
+    const repoPath = String(repoStatus().path || '');
+    const taskFolder = String(job?.taskFolder || '').trim() || absolute;
+
+    try {
+      const result = await api().refresh({ jobId, taskFolder, repoPath, absolute });
+      if (!result?.ok) {
+        if (!silent) toast(result?.message || 'تعذر تحديث حالة الوكيل.', { type: 'error' });
+        return null;
+      }
+      return { ok: true, data: result.data || null };
+    } catch (error) {
+      if (!silent) toast('تعذر تحديث حالة الوكيل.', { type: 'error' });
+      return null;
+    }
+  }
+
+  /** يرسل طلب تحديث/رسالة إلى جلسة الوكيل الحية. */
+  async function ping(jobId, message = '') {
+    if (!available()) {
+      const text = 'الأتمتة تحتاج تطبيق سطح المكتب.';
+      toast(text, { type: 'info' });
+      return { ok: false, message: text };
+    }
+    if (!jobId) {
+      const text = 'معرّف المهمة مطلوب.';
+      toast(text, { type: 'warning' });
+      return { ok: false, message: text };
+    }
+
+    try {
+      const result = await api().ping({ jobId, message: String(message || '').slice(0, 4000) });
+      if (!result?.ok) {
+        const text = result?.message || 'تعذر إرسال الطلب إلى الوكيل.';
+        toast(text, { type: 'error', duration: 5200 });
+        return { ok: false, message: text };
+      }
+      toast('أُرسل الطلب إلى الوكيل.', { type: 'success', icon: 'check-circle' });
+      return { ok: true, data: result.data || null };
+    } catch (error) {
+      const text = 'تعذر إرسال الطلب إلى الوكيل.';
+      toast(text, { type: 'error' });
+      return { ok: false, message: text };
+    }
+  }
+
+  /** يعيد بناء معطيات التشغيل من سجل الأتمتة ويبدأ تشغيلًا جديدًا. */
+  async function restart(jobId) {
+    if (!available()) return { ok: false, message: 'الأتمتة تحتاج تطبيق سطح المكتب.' };
+    const job = currentJob(jobId);
+    if (!job) return { ok: false, message: 'سجل الأتمتة غير موجود.' };
+    if (LIVE_STATES.includes(job.status) || activeForTask(job.taskId)) {
+      return { ok: false, message: 'أوقف التشغيل الحالي أولًا ثم أعد التشغيل.' };
+    }
+
+    let promptText = String(job.promptText || '').trim();
+    if (!promptText && job.promptId) {
+      try {
+        promptText = String(Data.findPrompt(job.promptId)?.content || '').trim();
+      } catch (error) {
+        promptText = '';
+      }
+    }
+
+    const result = await start({
+      taskId: job.taskId,
+      promptId: job.promptId || null,
+      promptName: job.promptName || '',
+      model: job.model || '',
+      notes: job.notes || '',
+      promptText
+    });
+
+    if (!result?.ok) {
+      toast(result?.message || 'تعذر إعادة التشغيل.', { type: 'error', duration: 5200 });
+      return result || { ok: false, message: 'تعذر إعادة التشغيل.' };
+    }
+    toast('بدأ تشغيل جديد.', { type: 'success', icon: 'check-circle' });
+    return result;
+  }
+
+  /** اشتراك بأحداث طلب التحديث (نص/خطأ/انتهاء). يعيد دالة إلغاء الاشتراك. */
+  function onPing(callback) {
+    if (typeof callback !== 'function') return () => {};
+    const service = api();
+    if (!service || typeof service.onPing !== 'function') return () => {};
+    try {
+      const off = service.onPing((payload) => {
+        try {
+          callback(payload);
+        } catch (error) {}
+      });
+      return typeof off === 'function' ? off : () => {};
+    } catch (error) {
+      return () => {};
+    }
+  }
+
   // ---------------------------------------------------------------- attach
 
   function attach() {
@@ -667,6 +789,10 @@ const Opencode = (() => {
     isModelAllowed,
     start,
     cancel,
+    refresh,
+    ping,
+    restart,
+    onPing,
     attach,
     lastEvent,
     markStaleJobs,

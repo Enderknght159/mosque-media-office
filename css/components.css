@@ -709,3 +709,37 @@
 .task-card-top { min-width: 0; }
 .task-card-top > .chip { min-width: 0; max-width: 100%; overflow: hidden; }
 .task-card-tools { flex-wrap: nowrap; }
+
+/* ===== Task date + due chips (additive) ===== */
+.task-footer-meta { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; min-width: 0; }
+.task-date-chip {
+  height: 20px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.task-date-chip .icon { flex: 0 0 auto; }
+.task-date-chip .task-date-text { line-height: 1; }
+.task-row:hover .task-date-chip { color: var(--text-2); }
+.task-row-dates { display: inline-flex; align-items: center; gap: 5px; justify-self: end; min-width: 0; }
+.task-row-dates .due-chip { flex: 0 0 auto; }
+
+@media (max-width: 560px) {
+  .task-row-dates .task-date-chip { display: none; }
+}
+
+/* Topbar quick-add: icon-only primary action */
+.icon-btn.topbar-add {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+}
+.icon-btn.topbar-add:hover { background: var(--accent-hover); color: #fff; }

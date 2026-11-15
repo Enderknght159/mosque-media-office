@@ -194,6 +194,12 @@ const Data = (() => {
         templateId,
         stages,
         assigneeId: userIds.has(task.assigneeId) ? task.assigneeId : null,
+        date: /^\d{4}-\d{2}-\d{2}$/.test(String(task.date || ''))
+          ? task.date
+          : (() => {
+            const parsed = new Date(task.createdAt || now);
+            return Number.isNaN(parsed.getTime()) ? Utils.todayISO() : Utils.toISODate(parsed);
+          })(),
         dueDate: /^\d{4}-\d{2}-\d{2}$/.test(String(task.dueDate || '')) ? task.dueDate : '',
         priority: PRIORITIES[task.priority] ? task.priority : 'normal',
         description: String(task.description || '').trim(),
@@ -777,6 +783,7 @@ const Data = (() => {
         return newStage(name, templateStageId, group?.stageAssignees?.[templateStageId] || null);
       }),
       assigneeId: findUser(fields.assigneeId) ? fields.assigneeId : null,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(String(fields.date || '')) ? fields.date : Utils.todayISO(),
       dueDate: /^\d{4}-\d{2}-\d{2}$/.test(String(fields.dueDate || '')) ? fields.dueDate : '',
       priority: PRIORITIES[fields.priority] ? fields.priority : 'normal',
       description: String(fields.description || '').trim(),
@@ -799,6 +806,9 @@ const Data = (() => {
     task.groupId = group ? group.id : task.groupId;
     task.templateId = template ? template.id : (fields.templateId !== undefined ? fields.templateId : task.templateId);
     if (fields.assigneeId !== undefined) task.assigneeId = findUser(fields.assigneeId) ? fields.assigneeId : null;
+    if (fields.date !== undefined) {
+      task.date = /^\d{4}-\d{2}-\d{2}$/.test(String(fields.date || '')) ? fields.date : task.date;
+    }
     if (fields.dueDate !== undefined) task.dueDate = /^\d{4}-\d{2}-\d{2}$/.test(String(fields.dueDate || '')) ? fields.dueDate : '';
     if (fields.priority !== undefined) task.priority = PRIORITIES[fields.priority] ? fields.priority : 'normal';
     if (fields.description !== undefined) task.description = String(fields.description || '').trim();

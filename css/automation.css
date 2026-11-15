@@ -147,16 +147,24 @@
   font-size: 9.5px;
   color: var(--text-2);
 }
-.automation-phase { font-weight: 600; color: var(--text-2); }
-.automation-eta {
+.automation-phase { font-weight: 600; color: var(--text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.automation-run-timing {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
+  flex-wrap: wrap;
   font-size: 8.5px;
   color: var(--accent);
   white-space: nowrap;
 }
-.automation-run.is-queued .automation-eta { color: var(--text-3); }
+.automation-run-timing .automation-timing-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.automation-run-timing .automation-timing-item:first-child { color: var(--text-3); }
+.automation-run.is-queued .automation-run-timing { color: var(--text-3); }
 
 .automation-run-progress { display: flex; align-items: center; gap: 9px; }
 .automation-run-progress .progress { flex: 1; }
@@ -192,23 +200,57 @@
 .automation-history { padding: 18px; margin-bottom: 15px; }
 .automation-history .card-head { flex-wrap: wrap; }
 .automation-history-tabs { margin-bottom: 0; flex-wrap: wrap; justify-content: flex-end; }
-.automation-history-table td:first-child { font-weight: 550; }
-.automation-history-table .automation-task-link { font-size: 9.5px; font-weight: 600; max-width: 210px; }
-.automation-history-table .automation-status { font-size: 8px; }
-.automation-prompt-cell {
-  max-width: 170px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-2) !important;
+
+/* أعمدة ثابتة: الموديل لا يمدّد الجدول مهما طال معرّفه */
+.automation-history-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 680px;
 }
-.automation-model-cell {
-  max-width: 180px;
+.automation-history-table col.automation-col-task { width: 26%; }
+.automation-history-table col.automation-col-prompt { width: 18%; }
+.automation-history-table col.automation-col-model { width: 120px; }
+.automation-history-table col.automation-col-status { width: 78px; }
+.automation-history-table col.automation-col-duration { width: 64px; }
+.automation-history-table col.automation-col-cost { width: 70px; }
+.automation-history-table col.automation-col-date { width: 90px; }
+/* عمودان من أزرار الأيقونات بحجم xs (25px) يحتاجان عرضًا أوسع من 36px */
+.automation-history-table col.automation-col-actions { width: 62px; }
+.automation-history-table th,
+.automation-history-table td { padding-inline: 5px; }
+.automation-history-table th { overflow: hidden; text-overflow: ellipsis; }
+.automation-history-table .automation-th-actions { text-align: end; }
+.automation-history-table td { overflow: hidden; text-overflow: ellipsis; }
+.automation-history-table .automation-task-link { font-size: 9.5px; font-weight: 600; max-width: 100%; display: block; }
+.automation-history-table .automation-status { font-size: 8px; }
+
+.automation-cell-model {
+  max-width: 150px;
+  direction: ltr;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 8px !important;
   color: var(--text-3) !important;
 }
+.automation-prompt-cell {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2) !important;
+}
+.automation-cell-status .status-chip { font-size: 8px; }
+.automation-cell-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-2) !important;
+}
+.automation-cell-date { font-size: 8px; }
+.automation-cell-actions { white-space: nowrap; text-align: end; }
+.automation-cell-actions .icon-btn + .icon-btn { margin-inline-start: 2px; }
 
 /* ---------- مخطط التكلفة ---------- */
 .automation-chart-card { padding: 18px; margin-bottom: 15px; }
@@ -405,73 +447,372 @@
 }
 
 /* ---------- تفاصيل التشغيل ---------- */
-.automation-job { display: flex; flex-direction: column; gap: 13px; }
+.automation-job { display: flex; flex-direction: column; gap: 11px; }
 .automation-job-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .automation-job-head .chip code { font-size: 8px; }
+/* أي جزء يُخفى بـ hidden داخل النافذة يجب أن يختفي فعلًا مهما كان display الخاص به */
+.automation-job [hidden] { display: none !important; }
 
-.automation-job-meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-}
-.automation-job-meta-item {
+/* --- البطاقة الحية --- */
+.automation-job-hero {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: var(--surface-2);
-  min-width: 0;
-}
-.automation-job-meta-item > span { font-size: 8px; color: var(--text-3); }
-.automation-job-meta-item > strong {
-  font-size: 9.5px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-  line-height: 1.6;
-}
-
-.automation-usage {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(102px, 1fr));
-  gap: 7px;
-}
-.automation-usage-item {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 9px 10px;
+  gap: 8px;
+  padding: 13px 15px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-solid);
-  min-width: 0;
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  overflow: hidden;
 }
-.automation-usage-item > span { font-size: 8px; color: var(--text-3); }
-.automation-usage-item > strong {
-  font-size: 13px;
-  font-weight: 650;
+.automation-job-hero.is-live {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-2) 66%);
+}
+.automation-job-hero.is-live::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  width: 3px;
+  background: var(--accent);
+  animation: automationPulse 1.8s ease-in-out infinite;
+}
+.automation-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.automation-hero-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.automation-hero-updated .icon { color: var(--text-3); }
+.automation-hero-phase {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.automation-hero-progress { display: flex; align-items: center; gap: 10px; }
+.automation-hero-bar { flex: 1; min-width: 0; display: block; }
+.automation-hero-bar .progress { height: 7px; }
+.automation-hero-percent {
+  flex: 0 0 auto;
+  min-width: 40px;
+  text-align: end;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.automation-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 9px;
+  color: var(--text-3);
+}
+.automation-hero-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.automation-hero-meta .icon { color: var(--text-3); }
+
+/* --- بطاقات الأرقام الحية --- */
+.automation-live-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+.automation-live-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-solid);
+}
+.automation-live-stat-icon { display: flex; color: var(--text-3); margin-bottom: 1px; }
+.automation-live-stat strong {
+  max-width: 100%;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.automation-usage-item.is-cost {
+.automation-live-stat-label { font-size: 8px; color: var(--text-3); }
+.automation-live-stat.is-cost {
   background: var(--orange-soft);
   border-color: color-mix(in srgb, var(--orange) 22%, transparent);
 }
-.automation-usage-item.is-cost > strong { color: var(--orange); }
+.automation-live-stat.is-cost .automation-live-stat-icon { color: var(--orange); }
+.automation-live-stat.is-cost strong { color: var(--orange); }
+
+/* --- البيانات الوصفية --- */
+.automation-meta-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  overflow: hidden;
+}
+.automation-meta-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 5px 11px;
+  border-bottom: 1px solid var(--border);
+}
+.automation-meta-row:last-child { border-bottom: 0; }
+.automation-meta-row dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 8.5px;
+  color: var(--text-3);
+}
+.automation-meta-row dt .icon { color: var(--text-3); flex: 0 0 auto; }
+.automation-meta-row dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 9.5px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+.automation-meta-row dd strong { color: var(--text); font-weight: 600; }
+.automation-meta-model {
+  display: block;
+  direction: ltr;
+  text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8.5px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- الجلسة --- */
+.automation-session-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: 9px;
+}
+.automation-session-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  color: var(--text-3);
+  font-size: 8.5px;
+}
+.automation-session-value {
+  flex: 1;
+  min-width: 0;
+  direction: ltr;
+  text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- المخرجات --- */
+.automation-outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-solid);
+}
+.automation-outputs-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8.5px;
+  color: var(--text-3);
+}
+.automation-outputs-list { display: flex; flex-direction: column; gap: 2px; }
+.automation-output-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 9px;
+  text-align: start;
+  cursor: pointer;
+}
+.automation-output-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.automation-output-chip .icon { flex: 0 0 auto; color: var(--text-3); }
+.automation-output-chip:hover { background: var(--accent-soft); color: var(--accent); }
+.automation-output-chip:hover .icon { color: var(--accent); }
+
+/* --- سؤال الوكيل (blocked) --- */
+.automation-blocked-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--orange) 30%, transparent);
+  border-radius: 11px;
+  background: var(--orange-soft);
+  color: var(--text-2);
+}
+.automation-blocked-banner > .icon { flex: 0 0 auto; margin-top: 1px; color: var(--orange); }
+.automation-blocked-banner > div { min-width: 0; }
+.automation-blocked-banner strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--orange);
+}
+.automation-blocked-banner p {
+  font-size: 10px;
+  line-height: 1.75;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.automation-blocked-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 8.5px;
+  color: var(--text-3);
+}
 
 .automation-job-error {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  padding: 9px 11px;
+  padding: 8px 11px;
   border-radius: 10px;
   background: var(--red-soft);
   color: var(--red);
 }
 .automation-job-error .icon { flex: 0 0 auto; margin-top: 2px; }
 .automation-job-error p { font-size: 10px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* --- أزرار أسفل النافذة --- */
+.automation-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.automation-footer-actions .icon-btn { color: var(--text-2); }
+.automation-footer-spacer { flex: 1 1 auto; }
+.automation-footer-actions .btn.primary { margin-inline-start: auto; }
+
+/* --- صف سؤال الوكيل --- */
+.automation-ping-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.automation-ping-row[hidden] { display: none; }
+.automation-ping-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.automation-ping-label .icon { color: var(--accent); }
+.automation-ping-input {
+  width: 100%;
+  min-height: 54px;
+  resize: vertical;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.7;
+}
+.automation-ping-input:focus { outline: none; border-color: var(--accent); }
+.automation-ping-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* --- السجل داخل details --- */
+.automation-log-details {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.automation-log-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 11px;
+  background: var(--surface-solid);
+  color: var(--text-2);
+  font-size: 9px;
+  cursor: pointer;
+  list-style: none;
+}
+.automation-log-details > summary::-webkit-details-marker { display: none; }
+.automation-log-details > summary > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 650;
+}
+.automation-log-details > summary .icon { color: var(--text-3); }
+.automation-log-details[open] > summary { border-bottom: 1px solid var(--border); }
+.automation-log-hint { font-size: 8px; color: var(--text-3); }
+.automation-log-details[open] .automation-log-hint { visibility: hidden; }
+.automation-log-details .automation-log-wrap { border: 0; border-radius: 0; }
 
 /* ---------- منطقة السجل ---------- */
 .automation-log-wrap {
@@ -521,13 +862,31 @@
 
 /* ---------- استجابة الشاشات الصغيرة ---------- */
 @media (max-width: 900px) {
-  .automation-job-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .automation-live-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .automation-hero-phase { font-size: 15px; }
 }
 
 @media (max-width: 640px) {
-  .automation-run-actions .btn { flex: 1 1 auto; }
   .automation-history .card-head { flex-direction: column; align-items: flex-start; }
   .automation-history-tabs { justify-content: flex-start; }
   .automation-chart-card .card-head { flex-wrap: wrap; }
-  .automation-job-meta { grid-template-columns: 1fr 1fr; }
+  .automation-history-table { min-width: 620px; }
+  .automation-live-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .automation-live-stat { padding: 7px 8px; }
+  .automation-live-stat strong { font-size: 12.5px; }
+  .automation-job-hero { padding: 12px; }
+  .automation-hero-phase { font-size: 14.5px; }
+  .automation-hero-meta { gap: 9px; }
+  .automation-meta-row { grid-template-columns: 78px minmax(0, 1fr); }
+  .automation-footer-actions { gap: 7px; }
+  .automation-footer-spacer { display: none; }
+  .automation-footer-actions .btn.primary { flex: 1 1 100%; margin-inline-start: 0; }
+  .automation-run-timing { gap: 8px; }
+}
+
+@media (max-width: 430px) {
+  .automation-live-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .automation-hero-meta { font-size: 8.5px; gap: 8px; }
+  .automation-session-row { flex-wrap: wrap; }
+  .automation-session-value { flex: 1 1 100%; order: 3; }
 }

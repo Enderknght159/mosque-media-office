@@ -148,7 +148,7 @@ const App = (() => {
             <h2 id="${titleId}">${Utils.esc(title)}</h2>
             ${subtitle ? `<p>${Utils.esc(subtitle)}</p>` : ''}
           </div>
-          <button class="icon-btn modal-close" type="button" data-close-modal aria-label="إغلاق">${Icons.svg('close', 18)}</button>
+          <button class="icon-btn modal-close" type="button" data-close-modal title="إغلاق" aria-label="إغلاق">${Icons.svg('close', 18)}</button>
         </header>
         <div class="modal-body">${body}</div>
         ${footer ? `<footer class="modal-footer">${footer}</footer>` : ''}

@@ -73,6 +73,10 @@ Pick a folder once from **الإعدادات ← المستودع**. The app wri
 
 The app runs `opencode run --format json --auto --model … "<prompt>"` inside the task folder and asks the agent to follow a written contract: final files in `output/`, technical work in `opencode/`, and progress in `opencode/status.json` (`state`, `phase`, `percent`, `etaSeconds`). The UI shows live progress from those events and from `status.json`, and records tokens and USD cost for every run.
 
+The run-details dialog is a live control panel: the current phase, percent, ETA, elapsed time, tokens, cost, outputs and the agent's question (when it is blocked) all come from `status.json` and the live process — no need to read the JSON. From it you can refresh the snapshot, ask the agent where it is, stop the run, restart it, open the output/opencode folders, and copy the session ID without displaying it.
+
+Task date is a first-class field: it names the folder (`20260810 - title`) and is shown on the card. Due date, assignee, priority, description and stages live under **إعدادات متقدمة** in the task dialog.
+
 There is no limit on how many automations run at once.
 
 ## Files

@@ -30,6 +30,12 @@ const MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._+\-]{0,120}\/[A-Za-z0-9._+\-#]{1,140}$
 // Windows CreateProcess caps the command line at 32767 UTF-16 chars; keep a margin.
 const MAX_ARG_PROMPT = 24000;
 
+const MAX_PING_MESSAGE = 4000;
+const PING_TIMEOUT = 3 * 60 * 1000; // 3 دقائق كحد أقصى لطلب التحديث
+const REFRESH_LOG_TAIL = 120;
+const PING_DEFAULT_MESSAGE = 'أين وصلت الآن؟ حدّث opencode/status.json بالمرحلة الحالية والنسبة والوقت المتبقي المتوقع، ثم أكمل العمل.';
+const NO_SESSION_MESSAGE = 'لا يمكن مراسلة الوكيل قبل بدء الجلسة أو بعد انتهائها.';
+
 const CONTRACT_MD = `# عقد العمل — المكتب الإعلامي
 
 أنت تعمل داخل مجلد مهمة واحدة. المصادر في هذا المجلد نفسه.
@@ -471,6 +477,19 @@ function bumpProgress(job) {
   if (next > job.progress) job.progress = next;
 }
 
+/** يجمع tokens/cost من حدث step_finish في عدّاد usage (يُستخدم في التشغيل والتحديث). */
+function accumulateUsage(usage, part, event) {
+  if (!usage || typeof usage !== 'object') return;
+  const tokens = part && part.tokens && typeof part.tokens === 'object' ? part.tokens : {};
+  const cache = tokens.cache && typeof tokens.cache === 'object' ? tokens.cache : {};
+  usage.input += number(tokens.input);
+  usage.output += number(tokens.output);
+  usage.reasoning += number(tokens.reasoning);
+  usage.cacheRead += number(cache.read);
+  usage.cacheWrite += number(cache.write);
+  usage.costUSD += number(part?.cost ?? event?.cost);
+}
+
 function handleEvent(job, event) {
   try {
     if (!event || typeof event !== 'object') return;
@@ -496,14 +515,7 @@ function handleEvent(job, event) {
       const text = safeText(part.text || event.text || '', MAX_MESSAGE).trim();
       if (text) job.lastMessage = text;
     } else if (type === 'step_finish') {
-      const tokens = part.tokens && typeof part.tokens === 'object' ? part.tokens : {};
-      const cache = tokens.cache && typeof tokens.cache === 'object' ? tokens.cache : {};
-      job.usage.input += number(tokens.input);
-      job.usage.output += number(tokens.output);
-      job.usage.reasoning += number(tokens.reasoning);
-      job.usage.cacheRead += number(cache.read);
-      job.usage.cacheWrite += number(cache.write);
-      job.usage.costUSD += number(part.cost ?? event.cost);
+      accumulateUsage(job.usage, part, event);
       if (part.reason === 'tool-calls' || part.reason === 'tool_calls') {
         job.phase = 'تنفيذ أدوات';
       }
@@ -880,6 +892,7 @@ async function start(payload = {}) {
     runPath: path.join(taskFolder, OPENCODE_DIR, `run-${jobId}.json`),
     statusPath,
     logStream,
+    opencodePath: safeText(payload.opencodePath, 1000).trim(),
     usage: emptyUsage(),
     steps: 0,
     progress: 0,
@@ -896,6 +909,7 @@ async function start(payload = {}) {
     agentStatus: null,
     cancelled: false,
     closed: false,
+    pinging: null,
     toolIds: new Set(),
     stdoutBuffer: '',
     stderrBuffer: '',
@@ -994,6 +1008,7 @@ async function cancel(payload = {}) {
   if (!job || job.closed) return { ok: true, data: { cancelled: false } };
   job.cancelled = true;
   job.phase = 'جارٍ الإلغاء';
+  killPing(job);
   killTree(job, false);
   queueUpdate(job, true);
   return { ok: true, data: { cancelled: true } };
@@ -1115,6 +1130,387 @@ async function log(payload = {}) {
   return { ok: true, data: { text: readTail(logPath, tail), path: logPath } };
 }
 
+// ---------------------------------------------------------------- refresh
+
+function liveJobFor(jobId) {
+  const id = safeText(jobId, 120).trim();
+  if (!id) return null;
+  const job = jobs.get(id);
+  return job && !job.closed ? job : null;
+}
+
+/** المجلد: من العملية الحية أولًا، ثم من الحمولة (بنفس قواعد start). */
+function resolveRefreshFolder(payload, live) {
+  if (live && live.taskFolder && existsDir(live.taskFolder)) return live.taskFolder;
+  try {
+    return resolveFolderFromPayload(payload);
+  } catch (error) {
+    return '';
+  }
+}
+
+/** يفضّل run-<jobId>.json ثم الأحدث. */
+function readRunFor(taskFolder, jobId) {
+  if (!taskFolder) return null;
+  const dir = path.join(taskFolder, OPENCODE_DIR);
+  const id = safeText(jobId, 120).trim();
+  if (id && JOB_ID_RE.test(id)) {
+    const preferred = readJson(path.join(dir, `run-${id}.json`));
+    if (preferred && typeof preferred === 'object') return preferred;
+  }
+  return newestRunFile(taskFolder);
+}
+
+function newestLogFile(taskFolder) {
+  const dir = path.join(taskFolder, OPENCODE_DIR, LOG_DIR);
+  try {
+    const files = fs.readdirSync(dir)
+      .filter((name) => /^[A-Za-z0-9_.-]+\.jsonl$/.test(name))
+      .map((name) => {
+        const full = path.join(dir, name);
+        let time = 0;
+        try {
+          time = fs.statSync(full).mtimeMs;
+        } catch (error) {}
+        return { full, time };
+      })
+      .sort((a, b) => b.time - a.time);
+    return files.length ? files[0].full : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+/**
+ * قراءة حالة الوكيل من القرص (status.json + run-*.json + آخر السجل) بلا أي كتابة.
+ * لا ترمي أبدًا: الملفات الناقصة تُعاد كـ null.
+ */
+async function refresh(payload = {}) {
+  const jobId = safeText(payload.jobId, 120).trim();
+  const live = liveJobFor(jobId);
+  const folder = resolveRefreshFolder(payload, live);
+
+  const agentStatus = folder ? readAgentStatus(path.join(folder, OPENCODE_DIR, STATUS_FILE)) : null;
+  const run = folder ? readRunFor(folder, jobId) : null;
+
+  let logPath = '';
+  if (live && live.logPath && existsFile(live.logPath)) logPath = live.logPath;
+  if (!logPath && folder && jobId && JOB_ID_RE.test(jobId)) {
+    const candidate = path.join(folder, OPENCODE_DIR, LOG_DIR, `run-${jobId}.jsonl`);
+    if (existsFile(candidate)) logPath = candidate;
+  }
+  if (!logPath && folder) logPath = newestLogFile(folder);
+
+  const logTail = logPath ? readTail(logPath, REFRESH_LOG_TAIL) : '';
+
+  const data = {
+    jobId,
+    taskFolder: folder || '',
+    logPath,
+    agentStatus,
+    run,
+    logTail,
+    state: '',
+    phase: '',
+    percent: null,
+    etaSeconds: null,
+    message: '',
+    outputs: [],
+    updatedAt: null
+  };
+
+  if (agentStatus) {
+    data.state = agentStatus.state;
+    data.phase = agentStatus.phase || '';
+    data.percent = agentStatus.percent;
+    data.etaSeconds = agentStatus.etaSeconds;
+    data.message = agentStatus.message || '';
+    data.outputs = Array.isArray(agentStatus.outputs) ? agentStatus.outputs : [];
+    data.updatedAt = agentStatus.updatedAt || null;
+  }
+
+  if (live) {
+    if (!agentStatus) {
+      data.state = live.status;
+      data.phase = live.phase || '';
+      data.message = live.lastMessage || '';
+    }
+    if (data.percent == null) data.percent = Math.round(clamp(live.progress, 0, 100));
+    if (data.etaSeconds == null) data.etaSeconds = Math.max(0, Math.round(Number(live.etaSeconds) || 0));
+    data.usage = { ...live.usage };
+    data.steps = Math.max(0, Math.round(Number(live.steps) || 0));
+    data.progress = Math.round(clamp(live.progress, 0, 100));
+    data.status = live.status;
+    data.sessionID = live.sessionID || '';
+    data.pinging = Boolean(live.pinging && !live.pinging.finished);
+  }
+
+  return { ok: true, data };
+}
+
+// ---------------------------------------------------------------- ping
+
+function appendMainLog(job, line) {
+  try {
+    if (job.logStream) job.logStream.write(`${line}\n`);
+  } catch (error) {}
+}
+
+function sendPing(job, payload) {
+  send('mmo:automation:ping', {
+    jobId: job.jobId,
+    taskId: job.taskId,
+    timestamp: Date.now(),
+    ...payload
+  });
+}
+
+/** يحلل سطر JSONL من عملية التحديث: نص/خطأ إلى الواجهة، والتكلفة إلى usage الأب. */
+function handlePingLine(job, ping, rawLine) {
+  const line = String(rawLine || '').replace(/\r$/, '');
+  if (!line.trim()) return;
+
+  try {
+    ping.logStream.write(`${line}\n`);
+  } catch (error) {}
+  appendMainLog(job, `[ping] ${line}`);
+
+  let event = null;
+  try {
+    event = JSON.parse(line);
+  } catch (error) {
+    event = null;
+  }
+
+  if (!event || typeof event !== 'object') {
+    sendPing(job, { type: 'log', text: safeText(line, 2000) });
+    return;
+  }
+
+  const eventSessionID = event.sessionID || event.session?.id || '';
+  if (eventSessionID && !job.sessionID) job.sessionID = safeText(eventSessionID, 80);
+
+  const type = String(event.type || '');
+  const part = event.part && typeof event.part === 'object' ? event.part : {};
+
+  if (type === 'text') {
+    const text = safeText(part.text || event.text || '', MAX_ERROR).trim();
+    if (text) {
+      ping.lastText = text;
+      sendPing(job, { type: 'text', text });
+    }
+  } else if (type === 'step_finish') {
+    accumulateUsage(job.usage, part, event);
+    queueUpdate(job);
+  } else if (type === 'error') {
+    const err = event.error && typeof event.error === 'object' ? event.error : {};
+    const message = err.message || err.data?.message || event.message || err.type || 'خطأ من opencode';
+    ping.error = safeText(String(message), MAX_ERROR);
+    sendPing(job, { type: 'error', text: ping.error });
+  }
+}
+
+function finishPing(job, ping, exitCode, extraError = '') {
+  if (!ping || ping.finished) return;
+  ping.finished = true;
+  if (ping.timer) {
+    clearTimeout(ping.timer);
+    ping.timer = null;
+  }
+  if (job && job.pinging === ping) job.pinging = null;
+
+  try {
+    if (ping.stdoutBuffer.trim()) {
+      handlePingLine(job, ping, ping.stdoutBuffer);
+      ping.stdoutBuffer = '';
+    }
+    if (ping.stderrBuffer.trim()) {
+      const line = ping.stderrBuffer.replace(/\r$/, '');
+      try {
+        ping.logStream.write(`[stderr] ${line}\n`);
+      } catch (error) {}
+      appendMainLog(job, `[ping] [stderr] ${line}`);
+      ping.stderrBuffer = '';
+      ping.stderrText = `${ping.stderrText}\n${line}`.slice(-MAX_STDERR);
+    }
+  } catch (error) {}
+
+  try {
+    ping.logStream.end();
+  } catch (error) {}
+
+  const code = exitCode == null ? null : Number(exitCode);
+  let error = safeText(ping.error || extraError, MAX_ERROR);
+  if (!error && code !== 0) {
+    const stderrTail = safeText((ping.stderrText || '').trim(), 800);
+    error = stderrTail || `انتهت العملية برمز ${code == null ? 'غير معروف' : code}.`;
+  }
+
+  if (job) {
+    sendPing(job, { type: 'done', exitCode: code, text: ping.lastText, error });
+  }
+}
+
+/**
+ * يرسل رسالة إلى جلسة الوكيل الحية عبر `opencode run --session <sessionID>`.
+ * لا يلمس status.json (الوكيل يملكه)، ويكتب سجله الخاص ونسخة مسبوقة بـ [ping] في سجل المهمة.
+ */
+async function ping(payload = {}) {
+  const jobId = safeText(payload.jobId, 120).trim();
+  if (!JOB_ID_RE.test(jobId)) return { ok: false, message: 'معرّف المهمة غير صالح.', code: 'bad-job-id' };
+
+  const job = jobs.get(jobId);
+  if (!job || job.closed) return { ok: false, message: NO_SESSION_MESSAGE, code: 'no-live-job' };
+  if (!job.sessionID) return { ok: false, message: NO_SESSION_MESSAGE, code: 'no-session' };
+  if (job.pinging && !job.pinging.finished) {
+    return { ok: false, message: 'هناك طلب تحديث قيد التنفيذ لهذه الأتمتة. انتظر انتهاءه.', code: 'ping-busy' };
+  }
+  if (!MODEL_RE.test(String(job.model || ''))) {
+    return { ok: false, message: 'اسم الموديل غير صالح لهذه الأتمتة.', code: 'bad-model' };
+  }
+
+  const message = safeText(payload.message, MAX_PING_MESSAGE).trim() || PING_DEFAULT_MESSAGE;
+
+  const commandInfo = resolveCommand(job.opencodePath || payload.opencodePath);
+  if (!commandInfo.command) {
+    return {
+      ok: false,
+      message: 'لم يُعثر على opencode. ثبّت الحزمة أو حدّد مسارها في الإعدادات.',
+      code: 'opencode-missing'
+    };
+  }
+
+  let logPath = '';
+  let logStream;
+  try {
+    const logDir = path.join(job.taskFolder, OPENCODE_DIR, LOG_DIR);
+    fs.mkdirSync(logDir, { recursive: true });
+    logPath = path.join(logDir, `ping-${jobId}-${Date.now()}.jsonl`);
+    logStream = fs.createWriteStream(logPath, { flags: 'a' });
+    logStream.on('error', () => {});
+  } catch (error) {
+    return { ok: false, message: 'تعذر إنشاء ملف سجل طلب التحديث.', code: 'log-failed' };
+  }
+
+  const args = ['run', '--format', 'json', '--auto', '--session', job.sessionID, '--model', job.model, message];
+  const env = { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' };
+  const stdio = ['ignore', 'pipe', 'pipe'];
+
+  let proc;
+  try {
+    if (commandInfo.shell && process.platform === 'win32') {
+      const line = buildShellStartCommand(commandInfo.command, args);
+      proc = spawn(line, { shell: true, windowsHide: true, cwd: job.taskFolder, env, stdio });
+    } else {
+      proc = spawn(commandInfo.command, args, {
+        shell: Boolean(commandInfo.shell),
+        windowsHide: true,
+        cwd: job.taskFolder,
+        env,
+        stdio
+      });
+    }
+  } catch (error) {
+    try {
+      logStream.end();
+    } catch (logError) {}
+    return { ok: false, message: `تعذر تشغيل opencode: ${error?.message || 'خطأ غير معروف'}`, code: 'spawn-failed' };
+  }
+
+  const ping = {
+    proc,
+    jobId,
+    logPath,
+    logStream,
+    stdoutBuffer: '',
+    stderrBuffer: '',
+    stderrText: '',
+    lastText: '',
+    error: '',
+    message,
+    startedAt: nowISO(),
+    finished: false,
+    timedOut: false,
+    timer: null
+  };
+  job.pinging = ping;
+
+  appendMainLog(job, `[ping] --- ${nowISO()} ${message}`);
+  appendMainLog(job, `[ping] run --format json --auto --session ${job.sessionID} --model ${job.model}`);
+
+  proc.stdout?.on('data', (chunk) => {
+    try {
+      ping.stdoutBuffer += chunk.toString();
+      if (ping.stdoutBuffer.length > 4 * 1024 * 1024) {
+        ping.stdoutBuffer = ping.stdoutBuffer.slice(-2 * 1024 * 1024);
+      }
+      let index = ping.stdoutBuffer.indexOf('\n');
+      while (index !== -1) {
+        const line = ping.stdoutBuffer.slice(0, index);
+        ping.stdoutBuffer = ping.stdoutBuffer.slice(index + 1);
+        handlePingLine(job, ping, line);
+        index = ping.stdoutBuffer.indexOf('\n');
+      }
+    } catch (error) {}
+  });
+
+  proc.stderr?.on('data', (chunk) => {
+    try {
+      ping.stderrBuffer += chunk.toString();
+      let index = ping.stderrBuffer.indexOf('\n');
+      while (index !== -1) {
+        const line = ping.stderrBuffer.slice(0, index).replace(/\r$/, '');
+        ping.stderrBuffer = ping.stderrBuffer.slice(index + 1);
+        if (line.trim()) {
+          try {
+            ping.logStream.write(`[stderr] ${line}\n`);
+          } catch (error) {}
+          appendMainLog(job, `[ping] [stderr] ${line}`);
+          ping.stderrText = `${ping.stderrText}\n${line}`.slice(-MAX_STDERR);
+        }
+        index = ping.stderrBuffer.indexOf('\n');
+      }
+      if (ping.stderrBuffer.length > 64 * 1024) {
+        ping.stderrText = `${ping.stderrText}\n${ping.stderrBuffer}`.slice(-MAX_STDERR);
+        ping.stderrBuffer = '';
+      }
+    } catch (error) {}
+  });
+
+  proc.on('error', (error) => {
+    const message = `تعذر تشغيل opencode: ${error?.message || 'خطأ غير معروف'}`;
+    sendPing(job, { type: 'error', text: safeText(message, MAX_ERROR) });
+    finishPing(job, ping, -1, message);
+  });
+
+  proc.on('close', (code) => {
+    finishPing(job, ping, code);
+  });
+
+  // حارس: لا يبقى طلب التحديث معلّقًا أكثر من ٣ دقائق.
+  ping.timer = setTimeout(() => {
+    if (ping.finished) return;
+    ping.timedOut = true;
+    ping.error = 'انتهت مهلة طلب التحديث.';
+    sendPing(job, { type: 'error', text: ping.error });
+    killTree(ping, false);
+  }, PING_TIMEOUT);
+  if (ping.timer.unref) ping.timer.unref();
+
+  return { ok: true, data: { started: true, logPath, pid: proc.pid || null, sessionID: job.sessionID } };
+}
+
+function killPing(job) {
+  const ping = job?.pinging;
+  if (!ping || ping.finished) return;
+  try {
+    if (ping.timer) clearTimeout(ping.timer);
+    ping.timer = null;
+    ping.error = 'أُلغي طلب التحديث.';
+    killTree(ping, false);
+  } catch (error) {}
+}
+
 // ---------------------------------------------------------------- register / shutdown
 
 function register(ipcMain, guard, options = {}) {
@@ -1130,6 +1526,8 @@ function register(ipcMain, guard, options = {}) {
   ipcMain.handle('opencode:jobs', wrap(jobsList));
   ipcMain.handle('opencode:status', wrap(status));
   ipcMain.handle('opencode:log', wrap(log));
+  ipcMain.handle('opencode:refresh', wrap(refresh));
+  ipcMain.handle('opencode:ping', wrap(ping));
 }
 
 function shutdown() {
@@ -1139,6 +1537,17 @@ function shutdown() {
       if (job.updateTimer) clearTimeout(job.updateTimer);
       if (job.cleanupTimer) clearTimeout(job.cleanupTimer);
       unwatchStatusFile(job);
+      if (job.pinging) {
+        const ping = job.pinging;
+        job.pinging = null;
+        try {
+          if (ping.timer) clearTimeout(ping.timer);
+          ping.timer = null;
+          ping.finished = true;
+          killTree(ping, true);
+          ping.logStream.end();
+        } catch (error) {}
+      }
       killTree(job, true);
       job.logStream.end();
     } catch (error) {}
@@ -1154,6 +1563,8 @@ module.exports = {
   models,
   start,
   cancel,
+  refresh,
+  ping,
   jobs: jobsList,
   status,
   log,

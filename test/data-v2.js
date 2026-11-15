@@ -80,6 +80,7 @@ check('automations array exists', Array.isArray(upgraded.automations));
 check('repo defaults to null', upgraded.settings.repo === null);
 check('ai defaults', upgraded.settings.ai.filter.mode === 'all' && upgraded.settings.ai.lastModel === '');
 check('task folder defaults empty', upgraded.tasks[0].folder === '');
+check('task date derived from creation date', upgraded.tasks[0].date === '2026-08-10', upgraded.tasks[0].date);
 
 section('prompts');
 Data.replace(upgraded);
@@ -92,8 +93,15 @@ const copy = Data.duplicatePrompt(prompt.id);
 check('duplicate creates second', Data.prompts().length === 2 && copy.id !== prompt.id);
 check('delete works', Data.deletePrompt(copy.id) && Data.prompts().length === 1);
 
-section('repository settings');
-Data.linkRepo({ path: 'C:\\media-repo', repoId: 'rpo_test' });
+section('task date');
+const datedTask = Data.createTask({ title: 'مهمة بتاريخ مخصص', groupId: 'grp_a', date: '2026-07-04', stageNames: ['مرحلة'] });
+check('createTask stores the chosen date', datedTask.date === '2026-07-04', datedTask.date);
+Data.updateTask(datedTask.id, { date: '2026-09-01' });
+check('updateTask changes the date', Data.findTask(datedTask.id).date === '2026-09-01');
+const invalidDate = Data.createTask({ title: 'مهمة بلا تاريخ صالح', groupId: 'grp_a', date: 'nope', stageNames: ['مرحلة'] });
+check('invalid date falls back to today', /^\d{4}-\d{2}-\d{2}$/.test(invalidDate.date), invalidDate.date);
+
+section('repository settings');Data.linkRepo({ path: 'C:\\media-repo', repoId: 'rpo_test' });
 check('repo linked', Data.settings().repo.path === 'C:\\media-repo');
 Data.applyFolderIndex({
   groups: { grp_a: 'مجموعة' },

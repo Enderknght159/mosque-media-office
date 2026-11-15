@@ -158,6 +158,24 @@ async function waitForServer() {
     await page.waitForTimeout(700);
     await page.screenshot({ path: path.join(shots, '21-settings.png'), fullPage: true });
 
+    const settingsMetrics = await page.evaluate(() => {
+      const grid = document.querySelector('.settings-grid');
+      const cards = [...document.querySelectorAll('.settings-grid > .settings-card')];
+      return {
+        grid: grid ? Math.round(grid.getBoundingClientRect().width) : 0,
+        cards: cards.map((card) => Math.round(card.getBoundingClientRect().width)),
+        columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0
+      };
+    });
+    if (settingsMetrics.columns < 3) errors.push(`settings grid has ${settingsMetrics.columns} columns at 1440px`);
+    if (settingsMetrics.cards.filter((width) => width > settingsMetrics.grid * 0.8).length > 1) {
+      errors.push('settings still has more than one full-width card');
+    }
+    const missingLabels = await page.evaluate(() => [...document.querySelectorAll('button, a')]
+      .filter((node) => node.querySelector('svg') && !node.textContent.trim() && !node.getAttribute('title') && !node.getAttribute('aria-label'))
+      .map((node) => node.outerHTML.slice(0, 90)));
+    if (missingLabels.length) errors.push(`icon controls without title/aria: ${missingLabels.join(' | ')}`);
+
     await page.goto(`${base}/#/tasks`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     const robot = await page.locator('[data-action="start-automation"]').count();
@@ -170,11 +188,36 @@ async function waitForServer() {
     await page.screenshot({ path: path.join(shots, '22-automation-start.png'), fullPage: false });
 
     await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    await page.locator('[data-action="add-task"]').first().click();
+    await page.waitForSelector('#task-form');
+    await page.waitForTimeout(300);
+    const hasDateField = await page.locator('#task-form [name="date"]').count();
+    if (!hasDateField) errors.push('task form lacks the task date field');
+    const advancedClosed = await page.locator('#task-form .advanced-settings').evaluate((el) => !el.open).catch(() => false);
+    if (!advancedClosed) errors.push('advanced settings should be closed for a new task');
+    await page.screenshot({ path: path.join(shots, '30-task-form.png') });
+    await page.locator('#task-form .advanced-settings-summary').click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(shots, '31-task-form-advanced.png') });
+    await page.keyboard.press('Escape');
+
     await page.goto(`${base}/#/dashboard`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(600);
     await page.screenshot({ path: path.join(shots, '23-dashboard-with-automation.png'), fullPage: true });
 
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.goto(`${base}/#/settings`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    const narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    if (narrowOverflow > 2) errors.push(`settings overflows at 1100px by ${narrowOverflow}px`);
+    await page.screenshot({ path: path.join(shots, '28-settings-1100.png'), fullPage: true });
+
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: path.join(shots, '29-settings-mobile.png'), fullPage: true });
+
+    await page.goto(`${base}/#/dashboard`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     const navLinks = await page.locator('.bottom-nav-link').count();
     if (navLinks < 6) errors.push(`bottom nav has ${navLinks} items`);

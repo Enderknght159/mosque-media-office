@@ -77,6 +77,11 @@ const Views = (() => {
     return value < 0.01 ? `$${value.toFixed(4)}` : `$${value.toFixed(2)}`;
   }
 
+  /** تنسيق ثابت لمحور التكلفة حتى لا تختلط الكسور ($0.000 / $0.050 / $0.100). */
+  function costAxis(usd) {
+    return `$${(Number(usd) || 0).toFixed(3)}`;
+  }
+
   function formatDuration(seconds) {
     const total = Math.max(0, Math.round(Number(seconds) || 0));
     if (!total) return '—';
@@ -210,7 +215,7 @@ const Views = (() => {
               <span>نسخة احتياطية</span>
               ${lastBackup}
             </div>
-            <button class="btn secondary sm sidebar-backup-btn" data-action="export-json">${Icons.svg('download', 15)} تصدير JSON</button>
+            <button class="icon-btn sidebar-backup-btn" data-action="export-json" title="تصدير نسخة JSON" aria-label="تصدير نسخة JSON">${Icons.svg('download', 16)}</button>
           </div>
           <div class="sidebar-local">${Icons.svg('database', 13)} البيانات محفوظة على هذا الجهاز</div>
         </div>
@@ -231,7 +236,7 @@ const Views = (() => {
       : `<div class="popover-empty">${Icons.svg('user-plus', 18)} لا يوجد أعضاء بعد</div>`;
     return `
       <header class="topbar no-print">
-        <button class="icon-btn menu-btn" data-action="open-drawer" aria-label="فتح القائمة">${Icons.svg('menu', 20)}</button>
+        <button class="icon-btn menu-btn" data-action="open-drawer" title="فتح القائمة" aria-label="فتح القائمة">${Icons.svg('menu', 20)}</button>
         <div class="crumb"><span>${currentMeta.section}</span><i>/</i><strong class="crumb-page">${currentMeta.label}</strong><strong class="crumb-mosque">${Utils.esc(data.settings.mosqueName)}</strong></div>
         <div class="topbar-spacer"></div>
         <div class="user-menu-wrap">
@@ -251,7 +256,7 @@ const Views = (() => {
         <button class="icon-btn" data-action="toggle-theme" title="${isDark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}" aria-label="${isDark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}">
           ${Icons.svg(isDark ? 'sun' : 'moon', 19)}
         </button>
-        <button class="btn primary topbar-add" data-action="add-task">${Icons.svg('plus', 17)}<span>مهمة جديدة</span></button>
+        <button class="icon-btn topbar-add" data-action="add-task" title="مهمة جديدة" aria-label="مهمة جديدة">${Icons.svg('plus', 19)}</button>
       </header>`;
   }
 
@@ -340,6 +345,8 @@ const Views = (() => {
     const priority = Data.PRIORITIES[task.priority];
     const activeJob = Data.activeAutomation(task.id);
     const color = group?.color || 'var(--accent)';
+    const dateISO = task.date || '';
+    const dateTitle = dateISO ? `تاريخ المهمة: ${Utils.fmtDate(dateISO)}` : '';
     const stageDots = task.stages.map((stage) => {
       const stateClass = stage.done ? 'done' : (next?.id === stage.id ? 'current' : '');
       return `<i class="stage-dot ${stateClass}" style="--stage-color:${color}" title="${Utils.esc(stage.name)}"></i>`;
@@ -379,7 +386,10 @@ const Views = (() => {
         <div class="stage-dots" aria-label="مراحل المهمة">${stageDots}</div>
         <footer class="task-footer">
           <span class="task-assignee">${avatar(assignee, 'xs')}<span>${assignee ? Utils.esc(assignee.name) : 'غير مسند'}</span></span>
-          <span class="due-chip tone-${due.tone}">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>
+          <span class="task-footer-meta">
+            ${dateISO ? `<span class="task-date-chip" title="${Utils.esc(dateTitle)}" aria-label="${Utils.esc(dateTitle)}">${Icons.svg('calendar', 12)}<span class="task-date-text">${Utils.esc(Utils.fmtDayMonth(dateISO))}</span></span>` : ''}
+            ${task.dueDate ? `<span class="due-chip tone-${due.tone}" title="تاريخ الاستحقاق">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>` : ''}
+          </span>
         </footer>
       </article>`;
   }
@@ -391,6 +401,8 @@ const Views = (() => {
     const next = Data.nextStage(task);
     const due = Utils.dueMeta(task);
     const activeJob = Data.activeAutomation(task.id);
+    const dateISO = task.date || '';
+    const dateTitle = dateISO ? `تاريخ المهمة: ${Utils.fmtDate(dateISO)}` : '';
     return `
       <div class="task-row" role="button" tabindex="0" data-action="open-task" data-task-id="${task.id}" aria-label="فتح المهمة ${Utils.esc(task.title)}">
         <span class="task-row-mark" style="background:${group?.color || 'var(--accent)'}"></span>
@@ -402,7 +414,10 @@ const Views = (() => {
           <span class="task-row-progress-bar">${progressBar(progress.pct, group?.color || 'var(--accent)', 'xs')}</span>
           <small>${progress.done}/${progress.total}</small>
         </span>
-        <span class="due-chip tone-${due.tone}">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>
+        <span class="task-row-dates">
+          ${dateISO ? `<span class="task-date-chip" title="${Utils.esc(dateTitle)}" aria-label="${Utils.esc(dateTitle)}">${Icons.svg('calendar', 12)}<span class="task-date-text">${Utils.esc(Utils.fmtDayMonth(dateISO))}</span></span>` : ''}
+          ${task.dueDate ? `<span class="due-chip tone-${due.tone}" title="تاريخ الاستحقاق">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>` : ''}
+        </span>
         ${avatar(assignee, 'xs')}
         <span class="task-row-tools">
           ${folderButton({ taskId: task.id, name: 'فتح مجلد المهمة', folder: task.folder || '', size: 'xs', iconSize: 14 })}
@@ -564,8 +579,8 @@ const Views = (() => {
           <strong>هذه بيانات تجريبية</strong>
           <p>جرّب المهام والتقارير بحرية، وامسحها عندما تبدأ بالبيانات الحقيقية.</p>
         </div>
-        <button class="btn secondary sm" data-action="clear-demo">مسح ${Utils.formatNumber(demoCount)} مهام تجريبية</button>
-        <button class="icon-btn sm" data-action="dismiss-demo" aria-label="إخفاء التنبيه">${Icons.svg('close', 15)}</button>
+        <button class="icon-btn sm danger-text" data-action="clear-demo" title="مسح ${Utils.formatNumber(demoCount)} مهام تجريبية" aria-label="مسح ${Utils.formatNumber(demoCount)} مهام تجريبية">${Icons.svg('trash', 15)}</button>
+        <button class="icon-btn sm" data-action="dismiss-demo" title="إخفاء التنبيه" aria-label="إخفاء التنبيه">${Icons.svg('close', 15)}</button>
       </div>`;
   }
 
@@ -618,7 +633,7 @@ const Views = (() => {
             color: '#6c63ff',
             ariaLabel: 'تكلفة الأتمتة اليومية خلال آخر 7 أيام',
             emptyText: 'لا توجد تكلفة مسجلة هذا الأسبوع',
-            valueFormat: (value) => formatCost(value),
+            valueFormat: (value) => costAxis(value),
             minStep: 0.0001
           })}
         </div>
@@ -651,7 +666,7 @@ const Views = (() => {
     const empty = overview.total === 0;
 
     return `
-      ${pageHead('نظرة عامة', dateLine, `<button class="btn secondary" data-action="add-task">${Icons.svg('plus', 16)} إضافة مهمة</button>`, data.settings.tagline)}
+      ${pageHead('نظرة عامة', dateLine, `<button class="icon-btn" data-action="add-task" title="إضافة مهمة" aria-label="إضافة مهمة">${Icons.svg('plus', 18)}</button>`, data.settings.tagline)}
       ${demoBanner(data, state)}
       <div class="stats-grid">
         ${statCard({
@@ -712,7 +727,7 @@ const Views = (() => {
                 <h2>حالة المهام</h2>
                 <p>توزيع المهام حسب مرحلة التقدم</p>
               </div>
-              <a class="icon-btn sm" href="#/tasks" data-nav="tasks" title="عرض المهام">${Icons.svg('arrow-left', 17)}</a>
+              <a class="icon-btn sm" href="#/tasks" data-nav="tasks" title="عرض المهام" aria-label="عرض المهام">${Icons.svg('arrow-left', 17)}</a>
             </div>
             <div class="donut-area">
               ${Charts.donut({
@@ -833,9 +848,9 @@ const Views = (() => {
           ${filterMenu({ icon: 'layers', label: 'تصفية حسب المجموعة', items: groupItems, value: filters.groupId, filterKey: 'groupId' })}
           ${filterMenu({ icon: 'users', label: 'تصفية حسب العضو', items: userItems, value: filters.userId, filterKey: 'userId' })}
           ${filterMenu({ icon: 'sort', label: 'ترتيب المهام', items: sortItems, value: filters.sort, filterKey: 'sort' })}
-          ${filtersActive ? `<button class="btn ghost sm" data-action="clear-task-filters">${Icons.svg('close', 14)} مسح</button>` : ''}
+          ${filtersActive ? `<button class="icon-btn sm" data-action="clear-task-filters" title="مسح الفلاتر" aria-label="مسح الفلاتر">${Icons.svg('close', 16)}</button>` : ''}
         </div>
-        ${window.MMO?.isDesktop ? `<button class="btn secondary sm toolbar-repo-btn" data-action="sync-repo-folders" title="مزامنة مجلدات المهام" aria-label="مزامنة مجلدات المهام">${Icons.svg('refresh', 15)}<span>مجلدات المهام</span></button>` : ''}
+        ${window.MMO?.isDesktop ? `<button class="icon-btn sm toolbar-repo-btn" data-action="sync-repo-folders" title="مزامنة مجلدات المهام" aria-label="مزامنة مجلدات المهام">${Icons.svg('refresh', 16)}</button>` : ''}
         <div class="view-switch" role="group" aria-label="طريقة عرض المهام">
           <button class="${view === 'cards' ? 'active' : ''}" data-action="set-task-view" data-view="cards" title="عرض البطاقات" aria-label="عرض البطاقات">${Icons.svg('grid', 16)}</button>
           <button class="${view === 'table' ? 'active' : ''}" data-action="set-task-view" data-view="table" title="عرض الجدول" aria-label="عرض الجدول">${Icons.svg('table', 16)}</button>
@@ -910,9 +925,9 @@ const Views = (() => {
                 <span><strong>${Utils.formatNumber(item.progress + item.fresh)}</strong><small>مفتوحة</small></span>
                 <span class="${item.overdue ? 'danger-text' : ''}"><strong>${Utils.formatNumber(item.overdue)}</strong><small>متأخرة</small></span>
               </div>
-              <div class="group-card-actions">
-                <button class="btn secondary sm" data-action="view-group-tasks" data-group-id="${item.group.id}">فتح المهام</button>
-                <button class="btn ghost sm" data-action="add-task" data-group-id="${item.group.id}">${Icons.svg('plus', 14)} مهمة</button>
+              <div class="group-card-actions icon-actions">
+                <button class="icon-btn sm" data-action="view-group-tasks" data-group-id="${item.group.id}" title="فتح مهام المجموعة" aria-label="فتح مهام المجموعة">${Icons.svg('tasks', 16)}</button>
+                <button class="icon-btn sm" data-action="add-task" data-group-id="${item.group.id}" title="إضافة مهمة إلى المجموعة" aria-label="إضافة مهمة إلى المجموعة">${Icons.svg('plus', 16)}</button>
               </div>
             </article>`;
         }).join('')}
@@ -963,7 +978,7 @@ const Views = (() => {
               <div class="template-actions">
                 ${used.slice(0, 2).map((group) => `<span class="chip group-chip" style="--chip-color:${group.color}"><i></i>${Utils.esc(group.name)}</span>`).join('')}
                 ${used.length > 2 ? `<span class="chip muted">+${used.length - 2}</span>` : ''}
-                <button class="btn ghost sm" data-action="edit-template" data-template-id="${template.id}">تعديل القالب</button>
+                <button class="icon-btn sm" data-action="edit-template" data-template-id="${template.id}" title="تعديل القالب" aria-label="تعديل القالب">${Icons.svg('edit', 16)}</button>
               </div>
             </article>`;
         }).join('')}
@@ -1079,7 +1094,7 @@ const Views = (() => {
               color: '#6c63ff',
               ariaLabel: 'تكلفة الأتمتة اليومية خلال آخر 30 يومًا',
               emptyText: 'لا توجد تكلفة مسجلة في هذه الفترة',
-              valueFormat: (value) => formatCost(value),
+              valueFormat: (value) => costAxis(value),
               minStep: 0.0001
             })}
           </section>
@@ -1164,8 +1179,8 @@ const Views = (() => {
 
     return `
       ${pageHead('التقارير والإحصاءات', 'قِس الإنجاز حسب الفترة والمجموعة والعضو، وصدّر النتائج بسهولة', `
-        <button class="btn secondary" data-action="print-report">${Icons.svg('printer', 16)} طباعة / PDF</button>
-        <button class="btn primary" data-action="export-report-excel">${Icons.svg('file-spreadsheet', 16)} تصدير Excel</button>
+        <button class="icon-btn" data-action="print-report" title="طباعة التقرير أو حفظه PDF" aria-label="طباعة التقرير أو حفظه PDF">${Icons.svg('printer', 18)}</button>
+        <button class="icon-btn" data-action="export-report-excel" title="تصدير التقرير إلى Excel" aria-label="تصدير التقرير إلى Excel">${Icons.svg('file-spreadsheet', 18)}</button>
       `)}
       <div class="report-filters card no-print">
         <div class="filter-block">
@@ -1331,7 +1346,7 @@ const Views = (() => {
               <input type="text" id="settings-tagline" value="${Utils.esc(data.settings.tagline || 'المكتب الإعلامي')}" placeholder="المكتب الإعلامي" autocomplete="off" ${locked ? 'readonly' : ''}>
             </label>
             ${locked
-              ? `<button class="btn secondary sm" data-action="unlock-settings">${Icons.svg('lock-open', 14)} فتح القفل للتعديل</button>`
+              ? `<button class="icon-btn sm is-active" data-action="unlock-settings" title="فتح القفل للتعديل" aria-label="فتح القفل للتعديل">${Icons.svg('lock-open', 16)}</button>`
               : `<p class="field-hint">${Icons.svg('check', 13)} يُحفظ تلقائيًا</p>`}
           </div>
         </section>
@@ -1356,9 +1371,7 @@ const Views = (() => {
             <span class="muted">آخر نسخة احتياطية: ${Utils.esc(lastBackup)}</span>
           </div>
         </section>
-        ${window.SettingsSections?.repoMarkup ? window.SettingsSections.repoMarkup(data) : ''}
-        ${window.SettingsSections?.aiMarkup ? window.SettingsSections.aiMarkup(data) : ''}
-        <section class="settings-card card span-two security-card">
+        <section class="settings-card card security-card">
           <div class="card-head">
             <div><h2>قفل الإعدادات العامة</h2><p>حماية تغيير الأعضاء وهوية المسجد والحذف والاستيراد بكلمة مرور.</p></div>
             <span class="settings-icon">${Icons.svg(security ? 'shield' : 'lock', 19)}</span>
@@ -1374,10 +1387,10 @@ const Views = (() => {
             </div>
             <div class="security-actions">
               ${locked
-                ? `<button class="btn primary sm" data-action="unlock-settings">${Icons.svg('lock-open', 15)} فتح القفل</button>`
-                : `<button class="btn secondary sm" data-action="lock-settings">${Icons.svg('lock', 15)} قفل الآن</button>`}
-              <button class="btn secondary sm" data-action="set-password">${Icons.svg('key', 15)} تغيير كلمة المرور</button>
-              <button class="btn ghost sm danger-text" data-action="remove-password">${Icons.svg('trash', 15)} إزالة كلمة المرور</button>
+                ? `<button class="icon-btn sm is-active" data-action="unlock-settings" title="فتح القفل" aria-label="فتح القفل">${Icons.svg('lock-open', 16)}</button>`
+                : `<button class="icon-btn sm" data-action="lock-settings" title="قفل الآن" aria-label="قفل الآن">${Icons.svg('lock', 16)}</button>`}
+              <button class="icon-btn sm" data-action="set-password" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور">${Icons.svg('key', 16)}</button>
+              <button class="icon-btn sm danger-text" data-action="remove-password" title="إزالة كلمة المرور" aria-label="إزالة كلمة المرور">${Icons.svg('trash', 16)}</button>
             </div>
             <p class="field-hint">${Icons.svg('info', 13)} لا تُحفظ كلمة المرور نصًا، بل تُحفظ بصمة مشفّرة فقط. عند تصدير البيانات تظهر البصمة بدلًا من الكلمة.</p>
           ` : `
@@ -1389,12 +1402,14 @@ const Views = (() => {
               </div>
             </div>
             <div class="security-actions">
-              <button class="btn primary sm" data-action="set-password">${Icons.svg('key', 15)} تعيين كلمة مرور</button>
+              <button class="icon-btn sm is-active" data-action="set-password" title="تعيين كلمة مرور" aria-label="تعيين كلمة مرور">${Icons.svg('key', 16)}</button>
             </div>
             <p class="field-hint">${Icons.svg('info', 13)} تُحفظ بصمة مشفّرة فقط، ولا تظهر كلمة المرور عند تصدير التخزين.</p>
           `}
         </section>
-        <section class="settings-card card span-two logo-card">
+        ${window.SettingsSections?.repoMarkup ? window.SettingsSections.repoMarkup(data) : ''}
+        ${window.SettingsSections?.aiMarkup ? window.SettingsSections.aiMarkup(data) : ''}
+        <section class="settings-card card logo-card">
           <div class="card-head">
             <div><h2>شعار المسجد</h2><p>اختر صورة ليظهر الشعار في الواجهة وكأيقونة للتطبيق في المتصفح.</p></div>
             <span class="settings-icon">${Icons.svg('image', 19)}</span>
@@ -1408,15 +1423,15 @@ const Views = (() => {
               <p>${data.settings.logo ? 'يُستخدم حاليًا كأيقونة للتطبيق في المتصفح.' : 'ارفع صورة مربعة الشكل (PNG أو JPG أو SVG) لتصبح أيقونة التطبيق.'}</p>
             </div>
             <div class="logo-actions">
-              <button class="btn secondary sm" data-action="change-logo">${Icons.svg('upload', 15)} ${data.settings.logo ? 'تغيير الشعار' : 'رفع شعار'}</button>
-              ${data.settings.logo ? `<button class="btn ghost sm danger-text" data-action="remove-logo">${Icons.svg('trash', 15)} إزالة</button>` : ''}
+              <button class="icon-btn sm" data-action="change-logo" title="${data.settings.logo ? 'تغيير الشعار' : 'رفع شعار'}" aria-label="${data.settings.logo ? 'تغيير الشعار' : 'رفع شعار'}">${Icons.svg('upload', 16)}</button>
+              ${data.settings.logo ? `<button class="icon-btn sm danger-text" data-action="remove-logo" title="إزالة الشعار" aria-label="إزالة الشعار">${Icons.svg('trash', 16)}</button>` : ''}
             </div>
           </div>
         </section>
-        <section class="settings-card card span-two">
+        <section class="settings-card card">
           <div class="card-head">
             <div><h2>اختصارات المكتب</h2><p>أضف روابط لصفحات المسجد، ملفاتك المحلية، أو أدوات المونتاج والتصميم.</p></div>
-            <button class="btn secondary sm" data-action="add-link">${Icons.svg('plus', 15)} اختصار جديد</button>
+            <button class="icon-btn sm" data-action="add-link" title="اختصار جديد" aria-label="اختصار جديد">${Icons.svg('plus', 16)}</button>
           </div>
           <div class="links-list">
             ${links.length ? links.map((link) => `
@@ -1427,14 +1442,9 @@ const Views = (() => {
                   <span>${Utils.esc(shortcutDisplay(link.url))}</span>
                 </div>
                 <div class="link-actions">
-                  <a class="icon-btn sm" href="${Utils.esc(link.url)}" target="_blank" rel="noopener noreferrer" title="فتح الاختصار" aria-label="فتح الاختصار">${Icons.svg('external-link', 16)}</a>
-                  <div class="menu-wrap">
-                    <button class="icon-btn sm" data-action="toggle-menu" title="خيارات الاختصار" aria-label="خيارات الاختصار">${Icons.svg('more', 16)}</button>
-                    <div class="menu-pop card">
-                      <button data-action="edit-link" data-link-id="${link.id}">${Icons.svg('edit', 16)} تعديل</button>
-                      <button class="danger" data-action="delete-link" data-link-id="${link.id}">${Icons.svg('trash', 16)} حذف</button>
-                    </div>
-                  </div>
+                  <a class="icon-btn xs" href="${Utils.esc(link.url)}" target="_blank" rel="noopener noreferrer" title="فتح الاختصار" aria-label="فتح الاختصار">${Icons.svg('external-link', 15)}</a>
+                  <button class="icon-btn xs" data-action="edit-link" data-link-id="${link.id}" title="تعديل الاختصار" aria-label="تعديل الاختصار">${Icons.svg('edit', 15)}</button>
+                  <button class="icon-btn xs danger-text" data-action="delete-link" data-link-id="${link.id}" title="حذف الاختصار" aria-label="حذف الاختصار">${Icons.svg('trash', 15)}</button>
                 </div>
               </div>`).join('') : emptyState({
                 icon: 'link',
@@ -1446,7 +1456,7 @@ const Views = (() => {
           </div>
           <p class="field-hint">${Icons.svg('info', 13)} لفتح ملف محلي، استخدم رابطًا يبدأ بـ <span dir="ltr">file:///</span>. قد يطلب المتصفح إذنًا للوصول إلى الملفات.</p>
         </section>
-        <section class="settings-card card span-two">
+        <section class="settings-card card">
           <div class="card-head">
             <div><h2>البيانات والنسخ الاحتياطي</h2><p>صدّر نسخة كاملة أو استوردها على جهاز آخر.</p></div>
             <span class="settings-icon">${Icons.svg('archive', 19)}</span>
@@ -1471,14 +1481,14 @@ const Views = (() => {
           </div>
           <p class="field-hint">${Icons.svg('database', 13)} تُحفظ البيانات في هذا المتصفح فقط. صدّر نسخة احتياطية بانتظام أو لنقل البيانات إلى جهاز آخر.</p>
         </section>
-        <section class="settings-card card span-two danger-zone">
+        <section class="settings-card card danger-zone">
           <div class="card-head">
             <div><h2>منطقة الإجراءات الحساسة</h2><p>هذه الإجراءات لا يمكن التراجع عنها.</p></div>
             <span class="settings-icon">${Icons.svg('alert', 19)}</span>
           </div>
           <div class="danger-actions">
-            ${demoCount ? `<button class="btn secondary" data-action="clear-demo">${Icons.svg('sparkles', 16)} مسح المهام التجريبية (${Utils.formatNumber(demoCount)})</button>` : ''}
-            <button class="btn danger" data-action="reset-data">${Icons.svg('trash', 16)} إعادة تعيين النظام بالكامل</button>
+            ${demoCount ? `<button class="icon-btn sm danger-text" data-action="clear-demo" title="مسح المهام التجريبية (${Utils.formatNumber(demoCount)})" aria-label="مسح المهام التجريبية (${Utils.formatNumber(demoCount)})">${Icons.svg('sparkles', 16)}</button>` : ''}
+            <button class="icon-btn sm danger-text" data-action="reset-data" title="إعادة تعيين النظام بالكامل" aria-label="إعادة تعيين النظام بالكامل">${Icons.svg('trash', 16)}</button>
           </div>
         </section>
       </div>
@@ -1526,9 +1536,11 @@ const Views = (() => {
     shortcutDisplay,
     automationStatusChip,
     formatCost,
+    costAxis,
     formatDuration,
     jobPercent,
     runningChip,
     statusColors
   };
 })();
+

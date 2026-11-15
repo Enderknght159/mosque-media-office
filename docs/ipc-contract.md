@@ -45,9 +45,12 @@ window.MMO = {
     jobs(): { ok, data: { jobs: JobSnapshot[] } },
     status({ taskFolder }): { ok, data: { status: AgentStatus|null, run: RunRecord|null } },
     log({ jobId, tail }): { ok, data: { text } },
+    refresh({ jobId, taskFolder?, repoPath? }): { ok, data: { agentStatus, run, logTail, phase, percent, etaSeconds, message, outputs, updatedAt } },
+    ping({ jobId, message? }): { ok, data: { started, logPath, pid } },
     onEvent(cb): () => void,
     onUpdate(cb): () => void,
-    onDone(cb): () => void
+    onDone(cb): () => void,
+    onPing(cb): () => void
   }
 }
 ```
@@ -184,6 +187,8 @@ module.exports = {
   11. `setInterval`/تحديثات `mmo:automation:update` بحد أقصى 4 مرات/ثانية.
   12. لا حد لعدد العمليات المتزامنة.
 - `opencode:cancel`: `taskkill /pid <pid> /T /F` على ويندوز، وإنهاء العملية ومعالجة الخطأ إن كانت منتهية.
+- `opencode:refresh`: يعيد آخر حالة من `opencode/status.json` + أحدث `run-*.json` + آخر 120 سطرًا من السجل. يعمل للتشغيلات الحية والمنتهية (المجلد يجب أن يبقى داخل المستودع)، ولا يرمي خطأ لملف مفقود.
+- `opencode:ping`: يرسل رسالة متابعة إلى الوكيل داخل نفس الجلسة عبر `opencode run --session <id>`، ويكتب سجلًا في `opencode/logs/ping-<jobId>-<ts>.jsonl` ويضيف توكنز/تكلفة الرد إلى نفس التشغيل. يعمل فقط ما دامت العملية حية ومعها `sessionID`، ويُرفض مع رسالة عربية واضحة بعدها. الأحداث تُبث على `mmo:automation:ping` بالشكل `{ jobId, taskId, type: 'text'|'log'|'error'|'done', text, exitCode?, error? }`.
 - `opencode:jobs`: العمليات الحية فقط.
 - `opencode:status`: يقرأ `opencode/status.json` و`run-*.json` الأخير.
 - `opencode:log`: آخر N سطر من ملف السجل (افتراضي 200).

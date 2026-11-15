@@ -108,6 +108,8 @@ async function waitForServer() {
     await page.waitForSelector('#task-form');
     await page.fill('#task-form [name="title"]', 'مهمة اختبار تلقائية');
     await page.locator('#task-form .group-choice').nth(1).click();
+    await page.locator('#task-form .advanced-settings-summary').click();
+    await page.fill('#task-form [name="date"]', new Date().toISOString().slice(0, 10));
     await page.fill('#task-form [name="dueDate"]', new Date(Date.now() + 86400000).toISOString().slice(0, 10));
     await page.click('button[form="task-form"]');
     await page.waitForTimeout(350);

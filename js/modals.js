@@ -45,6 +45,7 @@ const Modals = (() => {
     }
     element.innerHTML = `${Icons.svg('alert-circle', 16)} <span>${Utils.esc(message)}</span>`;
     element.classList.add('visible');
+    return element;
   }
 
   function clearError(form) {
@@ -177,6 +178,13 @@ const Modals = (() => {
     return { stages };
   }
 
+  function stageNamesMatchTemplate(taskStages, template) {
+    const templateNames = (template?.stages || []).map((stage) => stage.name);
+    const names = (taskStages || []).map((stage) => stage.name);
+    if (names.length !== templateNames.length) return false;
+    return names.every((name, index) => name === templateNames[index]);
+  }
+
   function openTaskForm({ taskId = null, groupId = null, returnToDetail = false } = {}) {
     const task = taskId ? Data.findTask(taskId) : null;
     const data = Data.get();
@@ -225,6 +233,13 @@ const Modals = (() => {
         <input type="radio" name="priority" value="${priority.value}" ${(task?.priority || 'normal') === priority.value ? 'checked' : ''}>
         <span>${Icons.svg(priority.icon, 17)}</span>
       </label>`).join('');
+    const advancedOpen = Boolean(task) && (
+      Boolean(task.assigneeId)
+      || Boolean(task.dueDate)
+      || (task.priority && task.priority !== 'normal')
+      || Boolean(task.description)
+      || !stageNamesMatchTemplate(task.stages, template)
+    );
     const body = `
       <form id="task-form" class="form" novalidate>
         <div class="form-error" role="alert"></div>
@@ -235,56 +250,64 @@ const Modals = (() => {
           </div>
           <div class="group-picker">${groupChoices}</div>
         </div>
-        <div class="form-grid">
-          <label class="field span-two">
+        <div class="task-title-row">
+          <label class="field">
             <span>عنوان المهمة</span>
-            <input type="text" name="title" required maxlength="120" placeholder="مثال: درس الفجر: تفسير سورة الفاتحة" value="${Utils.esc(initialTitle)}" autocomplete="off">
+            <input type="text" name="title" required maxlength="120" placeholder="مثال: درس الفجر: تفسير سورة الفاتحة" value="${Utils.esc(initialTitle)}" autocomplete="off" autofocus>
           </label>
           <label class="field">
-            <span>المسؤول عن المهمة</span>
-            <select name="assigneeId">${userOptions}</select>
-          </label>
-          <label class="field">
-            <span>تاريخ الاستحقاق</span>
-            <input type="date" name="dueDate" value="${Utils.esc(task?.dueDate || '')}">
-          </label>
-          <div class="field span-two">
-            <span>الأولوية</span>
-            <div class="priority-row">
-              <div class="priority-picker" role="radiogroup" aria-label="أولوية المهمة">${priorityChoices}</div>
-              <span class="priority-label" id="priority-label" style="color:${selectedPriority.color}">${selectedPriority.label}</span>
-            </div>
-          </div>
-          <label class="field span-two">
-            <span>الوصف <small>اختياري</small></span>
-            <textarea name="description" rows="3" maxlength="600" placeholder="تفاصيل مختصرة، ملاحظات، أو رابط مرجعي...">${Utils.esc(task?.description || '')}</textarea>
+            <span>تاريخ المهمة</span>
+            <input type="date" name="date" value="${Utils.esc(task?.date || Utils.todayISO())}">
           </label>
         </div>
-        <div class="stage-collapse" id="stage-collapse">
-          <button type="button" class="stage-collapse-toggle" data-stage-toggle aria-expanded="false">
-            <span class="stage-collapse-icon">${Icons.svg('tasks', 17)}</span>
-            <span class="stage-collapse-text">
-              <strong>تعديل المراحل</strong>
-              <small id="stage-summary">${Utils.formatNumber(stages.length)} مراحل${template ? ` · ${Utils.esc(template.name)}` : ''}</small>
+        <details class="advanced-settings" ${advancedOpen ? 'open' : ''}>
+          <summary class="advanced-settings-summary">
+            <span class="advanced-settings-icon">${Icons.svg('settings', 16)}</span>
+            <span class="advanced-settings-text">
+              <strong>إعدادات متقدمة</strong>
+              <small>المسؤول · تاريخ الاستحقاق · الأولوية · الوصف · المراحل</small>
             </span>
-            <span class="template-pill">${Icons.svg('template', 13)} <span class="stage-template-name">${Utils.esc(template?.name || 'بدون قالب')}</span></span>
-            ${Icons.svg('chevron-down', 16, 'stage-collapse-chevron')}
-          </button>
-          <div class="stage-collapse-body" id="stage-collapse-body" hidden>
-            <div class="form-section-head">
-              <div>
-                <h3>${Icons.svg('tasks', 18)} مراحل المهمة</h3>
-                <p>يُطبّق القالب تلقائيًا، ويمكنك تخصيص المراحل ${locked ? '— المقفلة لأن المهمة بدأت' : ''}.</p>
+            ${Icons.svg('chevron-down', 16, 'advanced-settings-chevron')}
+          </summary>
+          <div class="advanced-settings-body">
+            <div class="form-grid">
+              <label class="field">
+                <span>المسؤول عن المهمة</span>
+                <select name="assigneeId">${userOptions}</select>
+              </label>
+              <label class="field">
+                <span>تاريخ الاستحقاق</span>
+                <input type="date" name="dueDate" value="${Utils.esc(task?.dueDate || '')}">
+              </label>
+              <div class="field span-two">
+                <span>الأولوية</span>
+                <div class="priority-row">
+                  <div class="priority-picker" role="radiogroup" aria-label="أولوية المهمة">${priorityChoices}</div>
+                  <span class="priority-label" id="priority-label" style="color:${selectedPriority.color}">${selectedPriority.label}</span>
+                </div>
               </div>
-              <div class="form-section-tools">
-                ${!locked ? `<button type="button" class="btn ghost sm" data-stage-add>${Icons.svg('plus', 14)} مرحلة</button>` : ''}
-              </div>
+              <label class="field span-two">
+                <span>الوصف <small>اختياري</small></span>
+                <textarea name="description" rows="3" maxlength="600" placeholder="تفاصيل مختصرة، ملاحظات، أو رابط مرجعي...">${Utils.esc(task?.description || '')}</textarea>
+              </label>
             </div>
-            <div class="stage-group-warning">${Icons.svg('info', 15)} المهمة بدأت بالفعل، لذا ستبقى المراحل الحالية كما هي عند تغيير المجموعة.</div>
-            <div class="stage-editor" id="stage-editor">${stages.map((stage, index) => stageRow(stage, index, locked)).join('')}</div>
-            ${locked ? `<p class="field-hint">${Icons.svg('lock', 13)} بعد بدء المراحل يمكن تعديل الأسماء فقط للحفاظ على ترتيب سجل الإنجاز.</p>` : ''}
+            <div class="stage-editor-block">
+              <div class="form-section-head">
+                <div>
+                  <h3>${Icons.svg('tasks', 18)} مراحل المهمة</h3>
+                  <p><span id="stage-summary">${Utils.formatNumber(stages.length)} مراحل</span> · يُطبّق القالب تلقائيًا${locked ? ' — المراحل مقفلة لأن المهمة بدأت' : ''}.</p>
+                </div>
+                <div class="form-section-tools">
+                  <span class="template-pill">${Icons.svg('template', 13)} <span class="stage-template-name">${Utils.esc(template?.name || 'بدون قالب')}</span></span>
+                  ${!locked ? `<button type="button" class="btn ghost sm" data-stage-add>${Icons.svg('plus', 14)} مرحلة</button>` : ''}
+                </div>
+              </div>
+              <div class="stage-group-warning">${Icons.svg('info', 15)} المهمة بدأت بالفعل، لذا ستبقى المراحل الحالية كما هي عند تغيير المجموعة.</div>
+              <div class="stage-editor" id="stage-editor">${stages.map((stage, index) => stageRow(stage, index, locked)).join('')}</div>
+              ${locked ? `<p class="field-hint">${Icons.svg('lock', 13)} بعد بدء المراحل يمكن تعديل الأسماء فقط للحفاظ على ترتيب سجل الإنجاز.</p>` : ''}
+            </div>
           </div>
-        </div>
+        </details>
       </form>`;
     const footer = `
       <div class="modal-footer-actions">
@@ -303,24 +326,29 @@ const Modals = (() => {
         const form = layer.querySelector('#task-form');
         const groupInputs = [...form.querySelectorAll('input[name="groupId"]')];
         const titleInput = form.querySelector('[name="title"]');
-        const titleSummary = form.querySelector('#stage-summary');
+        const dateInput = form.querySelector('[name="date"]');
+        const advanced = form.querySelector('.advanced-settings');
+        const stageSummary = form.querySelector('#stage-summary');
         const priorityLabel = form.querySelector('#priority-label');
-        const stageToggle = form.querySelector('[data-stage-toggle]');
-        const stageBody = form.querySelector('#stage-collapse-body');
-        const stageCollapse = form.querySelector('#stage-collapse');
         let titleTouched = Boolean(task);
 
         const currentGroup = () => Data.findGroup(form.querySelector('input[name="groupId"]:checked')?.value);
         const updateSummary = () => {
-          const currentTemplate = Data.findTemplate(currentGroup()?.templateId);
-          if (titleSummary) {
-            titleSummary.textContent = `${Utils.formatNumber(stageBody.querySelectorAll('.stage-edit-row').length)} مراحل${currentTemplate ? ` · ${currentTemplate.name}` : ''}`;
-          }
+          if (!stageSummary) return;
+          stageSummary.textContent = `${Utils.formatNumber(form.querySelectorAll('.stage-edit-row').length)} مراحل`;
         };
         const syncDefaultTitle = () => {
           if (task || titleTouched) return;
           const current = currentGroup();
           if (current) titleInput.value = defaultTitle(current);
+        };
+        const revealAdvanced = () => {
+          if (advanced && !advanced.open) advanced.open = true;
+        };
+        const showError = (message, { advanced: inAdvanced = false } = {}) => {
+          if (inAdvanced) revealAdvanced();
+          const element = formError(form, message);
+          if (element) element.scrollIntoView({ block: 'nearest' });
         };
 
         groupInputs.forEach((input) => input.addEventListener('change', syncDefaultTitle));
@@ -335,11 +363,6 @@ const Modals = (() => {
             priorityLabel.style.color = priority.color;
           });
         });
-        stageToggle.addEventListener('click', () => {
-          const open = stageCollapse.classList.toggle('open');
-          stageBody.hidden = !open;
-          stageToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
         bindStageEditor(form, { locked, groupInputs, onGroupChange: updateSummary });
 
         form.addEventListener('submit', (event) => {
@@ -347,18 +370,18 @@ const Modals = (() => {
           clearError(form);
           const title = titleInput.value.trim();
           if (!title) {
-            formError(form, 'اكتب عنوانًا للمهمة.');
+            showError('اكتب عنوانًا للمهمة.');
             titleInput.focus();
             return;
           }
           const collected = collectStageRows(form);
           if (collected.error) {
-            if (!stageCollapse.classList.contains('open')) stageToggle.click();
-            formError(form, collected.error);
+            showError(collected.error, { advanced: true });
             return;
           }
           const payload = {
             title,
+            date: dateInput.value || Utils.todayISO(),
             groupId: form.querySelector('input[name="groupId"]:checked')?.value || null,
             assigneeId: form.querySelector('[name="assigneeId"]').value || null,
             dueDate: form.querySelector('[name="dueDate"]').value,
@@ -399,6 +422,7 @@ const Modals = (() => {
     const due = Utils.dueMeta(task);
     const activeJob = Data.activeAutomation(task.id);
     const recentJobs = Data.automationsForTask(task.id).slice(0, 3);
+    const automationTitle = activeJob ? 'يوجد تشغيل جارٍ لهذه المهمة' : 'أتمتة المهمة بالذكاء الاصطناعي';
     const createdAt = Utils.fmtDateTime(task.createdAt);
     const completedAt = Data.taskCompletedAt(task);
     const timeline = task.stages.map((stage, index) => {
@@ -428,7 +452,7 @@ const Modals = (() => {
           </div>
           <div class="timeline-actions">
             ${done
-              ? `<button class="btn ghost sm" data-action="reopen-stage" data-task-id="${task.id}" data-stage-id="${stage.id}" data-source="detail">إعادة فتح</button>`
+              ? `<button class="icon-btn sm" data-action="reopen-stage" data-task-id="${task.id}" data-stage-id="${stage.id}" data-source="detail" title="إعادة فتح المرحلة" aria-label="إعادة فتح المرحلة">${Icons.svg('undo', 15)}</button>`
               : isNext
                 ? `<button class="btn primary sm" data-action="complete-stage" data-task-id="${task.id}" data-stage-id="${stage.id}" data-source="detail">${Icons.svg('check', 14)} إكمال</button>`
                 : `<span class="timeline-locked" title="أكمل المراحل السابقة أولًا">${Icons.svg('lock', 14)}</span>`}
@@ -449,9 +473,9 @@ const Modals = (() => {
           </div>` : ''}
         ${due.overdue ? `<div class="overdue-banner">${Icons.svg('alert', 16)} المهمة متأخرة عن موعدها. ${Utils.esc(due.text)}.</div>` : ''}
         <div class="task-action-row">
-          <button class="btn secondary sm" data-action="open-task-folder" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المهمة">${Icons.svg('folder-open', 15)} فتح المجلد</button>
-          <button class="btn secondary sm" data-action="open-task-output" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المخرجات">${Icons.svg('folder', 15)} فتح المخرجات</button>
-          <button class="btn secondary sm task-action-primary" data-action="start-automation" data-task-id="${task.id}" data-source="detail" title="${activeJob ? 'يوجد تشغيل جارٍ لهذه المهمة' : 'أتمتة المهمة بالذكاء الاصطناعي'}">${Icons.svg('robot', 15)} أتمتة بالذكاء الاصطناعي</button>
+          <button class="icon-btn" data-action="open-task-folder" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المهمة" aria-label="فتح مجلد المهمة">${Icons.svg('folder-open', 17)}</button>
+          <button class="icon-btn" data-action="open-task-output" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المخرجات" aria-label="فتح مجلد المخرجات">${Icons.svg('folder', 17)}</button>
+          <button class="icon-btn task-action-primary" data-action="start-automation" data-task-id="${task.id}" data-source="detail" title="${Utils.esc(automationTitle)}" aria-label="${Utils.esc(automationTitle)}">${Icons.svg('robot', 17)}</button>
         </div>
         ${activeJob ? `
           <div class="task-run-strip">
@@ -465,13 +489,14 @@ const Modals = (() => {
               ${Views.progressBar(Views.jobPercent(activeJob), '#0a84ff', 'sm')}
             </div>
             <div class="task-run-strip-actions">
-              <button class="btn ghost sm" data-action="open-job" data-job-id="${activeJob.id}">عرض التفاصيل</button>
-              <button class="btn ghost sm danger-text" data-action="cancel-automation" data-job-id="${activeJob.id}">${Icons.svg('stop', 14)} إلغاء</button>
+              <button class="icon-btn sm" data-action="open-job" data-job-id="${activeJob.id}" title="عرض تفاصيل التشغيل" aria-label="عرض تفاصيل التشغيل">${Icons.svg('activity', 16)}</button>
+              <button class="icon-btn sm is-danger" data-action="cancel-automation" data-job-id="${activeJob.id}" title="إلغاء التشغيل" aria-label="إلغاء التشغيل">${Icons.svg('stop', 16)}</button>
             </div>
           </div>` : ''}
         <div class="task-meta-grid">
+          <div class="meta-item"><span>تاريخ المهمة</span><strong class="meta-date">${Icons.svg('calendar', 12)} ${task.date ? Utils.esc(Utils.fmtDate(task.date)) : '—'}</strong></div>
           <div class="meta-item"><span>المسؤول</span><strong class="meta-user">${Views.avatar(assignee, 'xs')} ${assignee ? Utils.esc(assignee.name) : 'غير مسند'}</strong></div>
-          <div class="meta-item"><span>تاريخ الاستحقاق</span><strong>${task.dueDate ? Utils.fmtDate(task.dueDate) : 'بلا موعد'}</strong></div>
+          <div class="meta-item"><span>تاريخ الاستحقاق</span><strong>${task.dueDate ? Utils.esc(Utils.fmtDate(task.dueDate)) : 'بلا موعد'}</strong></div>
           <div class="meta-item"><span>الأولوية</span><strong style="color:${Data.PRIORITIES[task.priority].color}">${Data.PRIORITIES[task.priority].label}</strong></div>
           <div class="meta-item"><span>المجموعة</span><strong>${Utils.esc(group?.name || 'بدون مجموعة')}</strong></div>
           <div class="meta-item"><span>القالب</span><strong>${Utils.esc(template?.name || 'بدون قالب')}</strong></div>
@@ -505,12 +530,12 @@ const Modals = (() => {
       </div>`;
     const footer = `
       <div class="modal-footer-row">
-        <div class="footer-left">
-          <button class="btn ghost sm danger-text" data-action="delete-task" data-task-id="${task.id}" data-source="detail">${Icons.svg('trash', 15)} حذف</button>
-          <button class="btn ghost sm" data-action="duplicate-task" data-task-id="${task.id}" data-source="detail">${Icons.svg('copy', 15)} تكرار</button>
+        <div class="footer-left icon-actions">
+          <button class="icon-btn is-danger" data-action="delete-task" data-task-id="${task.id}" data-source="detail" title="حذف المهمة" aria-label="حذف المهمة">${Icons.svg('trash', 17)}</button>
+          <button class="icon-btn" data-action="duplicate-task" data-task-id="${task.id}" data-source="detail" title="تكرار المهمة" aria-label="تكرار المهمة">${Icons.svg('copy', 17)}</button>
         </div>
         <div class="footer-right">
-          <button class="btn secondary" data-action="edit-task" data-task-id="${task.id}" data-source="detail">${Icons.svg('edit', 15)} تعديل</button>
+          <button class="icon-btn" data-action="edit-task" data-task-id="${task.id}" data-source="detail" title="تعديل المهمة" aria-label="تعديل المهمة">${Icons.svg('edit', 17)}</button>
           ${next ? `<button class="btn primary" data-action="complete-stage" data-task-id="${task.id}" data-stage-id="${next.id}" data-source="detail">${Icons.svg('check', 15)} إكمال «${Utils.esc(next.name)}»</button>` : `<button class="btn primary" data-close-modal>إغلاق</button>`}
         </div>
       </div>`;

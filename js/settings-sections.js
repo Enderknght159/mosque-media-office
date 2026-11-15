@@ -1,15 +1,14 @@
 /* أقسام الإعدادات: مستودع الملفات + الأتمتة والذكاء الاصطناعي.
  * تُركَّب في صفحة الإعدادات عبر Views.settings → SettingsSections.repoMarkup/aiMarkup،
  * وتُدار أحداثها من App.handleAction بعد تفويض data-action.
+ * البطاقتان مضغوطتان: أزرار ثانوية بأيقونة فقط، والسماح بالموديلات عبر مفتاح .switch.
  */
 const SettingsSections = (() => {
   'use strict';
 
   const MANIFEST_NAME = 'mosque-media-office.repo.json';
-  const MIRROR_NAME = 'mosque-media-office.data.json';
-  const OUTPUT_DIR = 'output';
-  const OPENCODE_DIR = 'opencode';
   const DESKTOP_ONLY = 'هذه الميزة تعمل داخل تطبيق سطح المكتب فقط.';
+  const DESKTOP_NOTE = 'يعمل داخل تطبيق سطح المكتب فقط.';
 
   // حالة فحص الاتصال محفوظة في الذاكرة فقط (بيانات settings.ai لا تحتفظ بها بعد إعادة التحميل).
   let healthState = null;
@@ -40,12 +39,6 @@ const SettingsSections = (() => {
     return Boolean(window.MMO && window.MMO.isDesktop);
   }
 
-  function repoFolderName() {
-    const api = repoApi();
-    const name = api && (api.FOLDER_NAME || api.folderName || api.REPO_FOLDER_NAME);
-    return name ? String(name) : '';
-  }
-
   function esc(value) {
     return Utils.esc(value == null ? '' : String(value));
   }
@@ -62,6 +55,10 @@ const SettingsSections = (() => {
     try {
       App.refresh();
     } catch (error) {}
+  }
+
+  function num(value) {
+    return Utils.formatNumber(Number(value) || 0);
   }
 
   function repoState(data) {
@@ -87,16 +84,22 @@ const SettingsSections = (() => {
     };
   }
 
-  function desktopNote(extra = '') {
-    return `
-      <div class="info-banner">
-        <span>${Icons.svg('monitor', 18)}</span>
-        <p>${DESKTOP_ONLY}${extra ? ` ${esc(extra)}` : ''}</p>
-      </div>`;
+  // زر بأيقونة فقط: كل زر يحمل title + aria-label إلزاميًا.
+  function iconBtn(action, icon, label, options = {}) {
+    const classes = `icon-btn ${options.size || 'sm'}${options.danger ? ' danger-text' : ''}`;
+    const title = options.title || label;
+    const off = options.disabled ? ' disabled' : '';
+    const size = options.iconSize || 15;
+    return `<button type="button" class="${classes}" data-action="${esc(action)}" title="${esc(title)}" aria-label="${esc(label)}"${off}>${Icons.svg(icon, size)}</button>`;
   }
 
-  function num(value) {
-    return Utils.formatNumber(Number(value) || 0);
+  function statusChip(tone, text, title = '') {
+    const attr = title ? ` title="${esc(title)}"` : '';
+    return `<span class="status-chip ss-status-${tone}"${attr}><i></i>${esc(text)}</span>`;
+  }
+
+  function browserNote() {
+    return `<p class="ss-note">${Icons.svg('monitor', 15)}<span>${DESKTOP_NOTE}</span></p>`;
   }
 
   // ------------------------------------------------------------- repository
@@ -105,94 +108,59 @@ const SettingsSections = (() => {
     const repo = repoState(data);
     const linked = Boolean(repo);
     const desktop = isDesktop();
-    const off = desktop ? '' : ' disabled';
+    const disabled = !desktop;
     const api = repoApi();
     const canRepair = Boolean(api && typeof api.refreshMissing === 'function');
     const autoRename = repo ? repo.autoRename !== false : true;
-    const repoTitle = 'مستودع الملفات';
 
-    const linkedAt = repo && repo.linkedAt
-      ? `${Utils.relativeTime(repo.linkedAt)}`
-      : 'غير معروف';
-    const linkedTitle = repo && repo.linkedAt ? Utils.fmtDateTime(repo.linkedAt) : '';
+    const path = repo ? String(repo.path) : '';
     const syncText = repo && repo.lastSyncAt ? Utils.relativeTime(repo.lastSyncAt) : 'لم تُجرَ مزامنة بعد';
-    const syncTitle = repo && repo.lastSyncAt ? Utils.fmtDateTime(repo.lastSyncAt) : '';
+    const syncTitle = repo && repo.lastSyncAt ? `آخر مزامنة: ${Utils.fmtDateTime(repo.lastSyncAt)}` : 'لم تُجرَ مزامنة بعد';
 
-    const linkedBody = !linked ? '' : `
-      <div class="repo-summary" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span class="status-chip" style="--status-color:var(--green)"><i></i>مربوط</span>
-        <span class="chip" title="${esc(linkedTitle)}">${Icons.svg('calendar', 12)} رُبط ${esc(linkedAt)}</span>
-        <span class="chip" title="${esc(syncTitle)}">${Icons.svg('refresh', 12)} آخر مزامنة: ${esc(syncText)}</span>
-        ${repo && repo.repoId ? `<span class="chip muted" dir="ltr">${esc(repo.repoId)}</span>` : ''}
-      </div>
-      <div class="link-row repo-path-row" style="margin-top:10px">
-        <span class="settings-icon">${Icons.svg('folder-open', 17)}</span>
-        <div class="link-info">
-          <strong>مسار المستودع</strong>
-          <span dir="ltr" title="${esc(repo.path)}" style="font-family:ui-monospace,SFMono-Regular,Consolas,'Courier New',monospace;font-size:9.5px">${esc(repo.path)}</span>
+    const linkedBody = `
+      <div class="ss-row ss-row-between">
+        <div class="ss-inline">
+          ${statusChip('ok', 'مربوط')}
+          <span class="ss-meta" title="${esc(syncTitle)}">${Icons.svg('clock', 12)}${esc(syncText)}</span>
         </div>
-        <button class="icon-btn sm" data-action="repo-reveal" title="فتح المجلد" aria-label="فتح مجلد المستودع"${off}>${Icons.svg('external-link', 16)}</button>
-      </div>
-      <div class="repo-actions" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px">
-        <button class="btn primary sm" data-action="repo-sync"${off}>${Icons.svg('refresh', 14)} مزامنة الآن</button>
-        <button class="btn secondary sm" data-action="repo-relink"${off}>${Icons.svg('folder-open', 14)} تغيير المستودع</button>
-        <button class="btn secondary sm" data-action="repo-reveal"${off}>${Icons.svg('external', 14)} فتح المجلد</button>
-        <button class="btn ghost sm danger-text" data-action="repo-unlink"${off}>${Icons.svg('trash', 14)} فك الربط</button>
-      </div>
-      <div class="repo-missing" style="display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--border)">
-        <div class="repo-missing-text" style="min-width:0">
-          <strong style="font-size:10.5px;font-weight:650">مجلدات ناقصة</strong>
-          <p class="field-hint">راجع مجلدات المجموعات والمهام، وأعد إنشاء ما حُذف منها دون المساس بالملفات.</p>
+        <div class="icon-actions">
+          ${iconBtn('repo-sync', 'refresh', 'مزامنة المستودع الآن', { title: 'مزامنة الآن', disabled })}
+          ${iconBtn('repo-relink', 'folder', 'تغيير مجلد المستودع', { title: 'تغيير المستودع', disabled })}
+          ${iconBtn('repo-reveal', 'folder-open', 'فتح مجلد المستودع', { title: 'فتح المجلد', disabled })}
+          ${iconBtn('repo-unlink', 'trash', 'فك ربط المستودع', { title: 'فك الربط', danger: true, disabled })}
         </div>
-        <button class="btn secondary sm" data-action="${canRepair ? 'repo-repair' : 'repo-sync'}"${off}>${Icons.svg('refresh', 14)} فحص وإعادة إنشاء</button>
       </div>
-      <button type="button" class="repo-toggle" data-action="repo-auto-rename" role="switch" aria-checked="${autoRename}"${off}
-        style="display:flex;align-items:center;gap:12px;width:100%;margin-top:11px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);color:var(--text);text-align:start">
-        <span class="demo-toggle-copy" style="flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.5">
-          <strong style="font-size:10.5px;font-weight:650">إعادة تسمية مجلدات المهام عند تغيير عنوانها</strong>
-          <small style="font-size:8.5px;color:var(--text-3)">عند التعطيل يبقى اسم المجلد كما هو حتى لو تغيّر عنوان المهمة.</small>
-        </span>
-        <span aria-hidden="true" style="position:relative;width:39px;height:23px;flex:0 0 auto;border-radius:999px;background:${autoRename ? 'var(--green)' : 'var(--surface-3)'};transition:background .2s ease">
-          <span style="position:absolute;top:3px;${autoRename ? 'inset-inline-end:3px' : 'inset-inline-start:3px'};width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:inset-inline-start .2s ease"></span>
-        </span>
-      </button>`;
+      <div class="ss-mono-row" dir="ltr" title="${esc(path)}">
+        <span class="ss-mono-text">${esc(path)}</span>
+      </div>
+      <div class="ss-switch-row">
+        <span class="ss-switch-label">إعادة تسمية المجلدات مع تغيير العنوان</span>
+        <button type="button" class="switch" role="switch" aria-checked="${autoRename}" data-action="repo-auto-rename"
+          title="إعادة تسمية المجلدات مع تغيير العنوان" aria-label="إعادة تسمية المجلدات مع تغيير العنوان"${disabled ? ' disabled' : ''}></button>
+      </div>
+      <div class="ss-row ss-row-between ss-row-quiet">
+        <span class="ss-meta">${Icons.svg('info', 13)}مجلدات ناقصة</span>
+        ${iconBtn(canRepair ? 'repo-repair' : 'repo-sync', 'refresh', 'فحص وإعادة إنشاء المجلدات', { title: 'فحص وإعادة إنشاء المجلدات', disabled })}
+      </div>`;
 
-    const emptyBody = linked ? '' : `
-      <div class="info-banner">
-        <span>${Icons.svg('folder-open', 18)}</span>
-        <p>المستودع مجلد على هذا الجهاز يحتوي على مجلد لكل مجموعة، وداخل كل مجموعة مجلد لكل مهمة. تربطه مرة واحدة، فينشئ التطبيق بقية المجلدات ويحدّثها تلقائيًا.</p>
+    const emptyBody = `
+      <p class="ss-lead">اختر مجلدًا على جهازك ليُنشئ التطبيق داخله مجلدًا لكل مجموعة ومهمة.</p>
+      <div class="ss-actions">
+        <button type="button" class="btn primary sm" data-action="repo-link"${disabled ? ' disabled' : ''}>${Icons.svg('folder-open', 15)} اختيار مجلد المستودع</button>
       </div>
-      <div class="repo-init" style="display:flex;flex-wrap:wrap;gap:6px;margin:11px 0">
-        <span class="chip">${Icons.svg('file', 13)} <span dir="ltr" style="unicode-bidi:isolate">${MANIFEST_NAME}</span></span>
-        <span class="chip" title="ملف مرآة البيانات الذي يكتبه التطبيق">${Icons.svg('database', 13)} <span dir="ltr" style="unicode-bidi:isolate">${MIRROR_NAME}</span></span>
-        <span class="chip">${Icons.svg('folder', 13)} <span dir="ltr" style="unicode-bidi:isolate">${OUTPUT_DIR}/</span></span>
-        <span class="chip">${Icons.svg('terminal', 13)} <span dir="ltr" style="unicode-bidi:isolate">${OPENCODE_DIR}/</span></span>
-      </div>
-      <div class="repo-actions" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:9px">
-        <button class="btn primary" data-action="repo-link"${off}>${Icons.svg('folder-open', 16)} اختيار مجلد المستودع</button>
-      </div>
-      <p class="field-hint">${Icons.svg('info', 13)} لن يُحذف أو يُنقل أي ملف موجود مسبقًا. تُضاف العناصر أعلاه إلى المستودع، ويُنشأ داخل كل مهمة مجلد للمخرجات ومجلد لعمل الأتمتة.</p>`;
+      <p class="ss-note">${Icons.svg('info', 15)}<span>يُنشأ داخل المجلد ملف <code class="ss-code" dir="ltr">${esc(MANIFEST_NAME)}</code> يربطه بالتطبيق.</span></p>`;
 
     return `
-      <section class="settings-section settings-repo" style="grid-column:1/-1;display:flex;flex-direction:column;gap:10px;min-width:0" aria-labelledby="settings-repo-title">
-        <div class="section-head">
+      <section class="settings-card card" data-section="repo" aria-labelledby="settings-repo-title">
+        <div class="card-head">
           <div>
-            <h2 id="settings-repo-title">المستودع</h2>
-            <p>مجلد واحد على جهازك يجمع ملفات كل مجموعة وكل مهمة.</p>
+            <h2 id="settings-repo-title">مستودع الملفات</h2>
+            <p>مجلد واحد على جهازك يجمع الملفات والمهام.</p>
           </div>
-          <span class="chip muted" title="${esc(repoFolderName() || (linked ? repo.path : 'مستودع الملفات'))}">${Icons.svg('folder', 12)} ${linked ? 'مربوط' : 'غير مربوط'}</span>
+          <span class="settings-icon">${Icons.svg('folder-open', 19)}</span>
         </div>
-        <section class="settings-card card" data-section="repo" aria-label="${repoTitle}">
-          <div class="card-head">
-            <div>
-              <h2>${repoTitle}</h2>
-              <p>${linked ? 'كل مهمة لها مجلد مستقل للمصادر والمخرجات.' : 'اربط مجلدًا ليُرتَّب كل شيء تلقائيًا: مجموعة ← مهمة ← مخرجات.'}</p>
-            </div>
-            <span class="settings-icon">${Icons.svg('folder-open', 19)}</span>
-          </div>
-          ${desktop ? '' : desktopNote('افتح نسخة سطح المكتب لربط المستودع ومزامنته.')}
-          ${linked ? linkedBody : emptyBody}
-        </section>
+        ${desktop ? '' : browserNote()}
+        ${linked ? linkedBody : emptyBody}
       </section>`;
   }
 
@@ -216,17 +184,6 @@ const SettingsSections = (() => {
     return true;
   }
 
-  function healthChip() {
-    const health = currentHealth();
-    if (!health) {
-      return `<span class="status-chip" style="--status-color:var(--text-3)"><i></i>غير معروف</span>`;
-    }
-    if (health.available) {
-      return `<span class="status-chip" style="--status-color:var(--green)"><i></i>متصل${health.version ? ` · ${esc(health.version)}` : ''}</span>`;
-    }
-    return `<span class="status-chip" style="--status-color:var(--red)"><i></i>غير متصل</span>`;
-  }
-
   function currentHealth() {
     if (healthState) return healthState;
     const api = opencodeApi();
@@ -238,64 +195,59 @@ const SettingsSections = (() => {
     }
   }
 
-  function connectionCard(ai, desktop, off) {
+  function healthChip() {
     const health = currentHealth();
-    const checked = health && health.checkedAt ? `آخر فحص ${Utils.relativeTime(health.checkedAt)}` : 'لم يُفحص بعد';
-    const failure = health && !health.available
-      ? (health.message || 'لم يُعثر على opencode. ثبّته أو اضبط مساره أدناه.')
-      : '';
-    return `
-      <section class="settings-card card" data-section="ai-connection" aria-labelledby="settings-ai-conn-title">
-        <div class="card-head">
-          <div>
-            <h2 id="settings-ai-conn-title">اتصال opencode</h2>
-            <p>يُنفَّذ الذكاء الاصطناعي محليًا عبر opencode المثبّت على الجهاز.</p>
-          </div>
-          <span class="settings-icon">${Icons.svg('terminal', 19)}</span>
-        </div>
-        <div class="ai-conn-row" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-          ${healthChip()}
-          ${health && health.command ? `<span class="chip muted" dir="ltr" title="${esc(health.command)}">${esc(health.command)}</span>` : ''}
-          <span class="chip muted">${Icons.svg('clock', 12)} ${esc(checked)}</span>
-          <button class="btn secondary sm" data-action="ai-check"${off}>${Icons.svg('activity', 14)} فحص الاتصال</button>
-        </div>
-        ${failure ? `<p class="field-hint danger-text" style="margin-top:8px">${Icons.svg('alert-circle', 13)} ${esc(failure)}</p>` : ''}
-        <div class="field" style="margin-top:12px">
-          <span>مسار تنفيذ opencode <small>اختياري</small></span>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <input type="text" id="ai-opencode-path" value="${esc(ai.opencodePath)}" placeholder="opencode" dir="ltr" autocomplete="off" spellcheck="false"
-              style="flex:1;min-width:180px;font-family:ui-monospace,SFMono-Regular,Consolas,'Courier New',monospace;font-size:10.5px"${off}>
-            <button class="btn secondary sm" data-action="ai-save-path"${off}>${Icons.svg('check', 14)} حفظ</button>
-          </div>
-          <p class="field-hint">${Icons.svg('info', 13)} يُكتشف تلقائيًا من PATH عند تركه فارغًا، أو اكتب المسار الكامل لملف opencode التنفيذي.</p>
-        </div>
-      </section>`;
+    if (!health) return statusChip('unknown', 'غير معروف', 'لم يُفحص الاتصال بعد');
+    if (health.available) {
+      return statusChip('ok', health.version ? `متصل · ${health.version}` : 'متصل', health.version || 'متصل');
+    }
+    return statusChip('off', 'غير متصل', health.message || 'opencode غير متصل');
   }
 
-  function modelRow(model, filter, hidden = false) {
-    const allowed = isModelAllowed(model, filter);
+  function connectionBlock(ai, disabled) {
+    const health = currentHealth();
+    const checked = health && health.checkedAt ? `آخر فحص ${Utils.relativeTime(health.checkedAt)}` : 'لم يُفحص بعد';
+    const failure = health && !health.available ? String(health.message || '') : '';
+
     return `
-      <div class="ai-model-row${allowed ? '' : ' is-blocked'}" data-model="${esc(model)}"
-        style="display:${hidden ? 'none' : 'flex'};align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border)${allowed ? '' : ';opacity:.6'}">
-        <span class="ai-model-name" dir="ltr" title="${esc(model)}"
-          style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Consolas,'Courier New',monospace;font-size:10.5px;${allowed ? '' : 'text-decoration:line-through'}">${esc(model)}</span>
-        <span class="chip">${esc(providerOf(model))}</span>
-        <button class="btn ${allowed ? 'ghost' : 'secondary'} sm" data-action="ai-model-toggle" data-model="${esc(model)}"
-          aria-pressed="${allowed}" title="${allowed ? 'منع هذا الموديل' : 'السماح بهذا الموديل'}"
-          ${allowed ? 'style="color:var(--green)"' : ''}>${Icons.svg(allowed ? 'check' : 'close', 13)} ${allowed ? 'مسموح' : 'ممنوع'}</button>
+      <div class="ss-row ss-row-between">
+        <div class="ss-inline">
+          ${healthChip()}
+          <span class="ss-meta" title="${esc(checked)}">${Icons.svg('clock', 12)}${esc(checked)}</span>
+        </div>
+        ${iconBtn('ai-check', 'refresh', 'فحص اتصال opencode', { title: 'فحص الاتصال', disabled })}
+      </div>
+      ${failure ? `<p class="ss-note ss-note-error">${Icons.svg('alert', 15)}<span>${esc(failure)}</span></p>` : ''}
+      <div class="ss-input-row">
+        <input type="text" id="ai-opencode-path" class="ss-input ss-mono" value="${esc(ai.opencodePath)}" placeholder="opencode"
+          dir="ltr" autocomplete="off" spellcheck="false" aria-label="مسار تنفيذ opencode"${disabled ? ' disabled' : ''}>
+        ${iconBtn('ai-save-path', 'check', 'حفظ مسار opencode', { title: 'حفظ المسار', disabled })}
+      </div>
+      <p class="ss-note">${Icons.svg('info', 15)}<span>اتركه فارغًا للكشف التلقائي من PATH.</span></p>`;
+  }
+
+  function modelRow(model, filter, disabled, hidden = false) {
+    const allowed = isModelAllowed(model, filter);
+    const label = allowed ? `منع الموديل ${model}` : `السماح بالموديل ${model}`;
+    return `
+      <div class="ai-model-row${allowed ? '' : ' is-blocked'}" data-model="${esc(model)}"${hidden ? ' hidden' : ''}>
+        <span class="ai-model-name" dir="ltr" title="${esc(model)}">${esc(model)}</span>
+        <span class="ss-provider" dir="ltr" title="${esc(providerOf(model))}">${esc(providerOf(model))}</span>
+        <button type="button" class="switch" role="switch" aria-checked="${allowed}" data-action="ai-model-toggle" data-model="${esc(model)}"
+          title="${allowed ? 'مسموح' : 'ممنوع'}" aria-label="${esc(label)}"${disabled ? ' disabled' : ''}></button>
       </div>`;
   }
 
-  function modelsCard(ai, desktop, off) {
+  function modelsBlock(ai, disabled) {
     const list = ai.modelsCache.list;
     const allowedModels = list.filter((model) => isModelAllowed(model, ai.filter));
-    const cacheAt = ai.modelsCache.at
-      ? `آخر تحديث للقائمة ${Utils.relativeTime(ai.modelsCache.at)}`
-      : 'لم تُجلب القائمة من opencode بعد.';
     const blockedCount = list.length - allowedModels.length;
+    const cacheText = ai.modelsCache.at ? Utils.relativeTime(ai.modelsCache.at) : 'لا قائمة محفوظة';
+    const cacheTitle = ai.modelsCache.at ? Utils.fmtDateTime(ai.modelsCache.at) : 'لم تُجلب القائمة من opencode بعد';
     const hasLast = Boolean(ai.lastModel) && allowedModels.includes(ai.lastModel);
     const query = searchQuery.trim().toLowerCase();
     const visibleModels = query ? list.filter((model) => model.toLowerCase().includes(query)) : list;
+
     const defaultOptions = [
       `<option value=""${ai.lastModel ? '' : ' selected'}>بدون موديل افتراضي</option>`,
       ...allowedModels.map((model) => `<option value="${esc(model)}"${model === ai.lastModel ? ' selected' : ''}>${esc(model)}</option>`),
@@ -304,74 +256,61 @@ const SettingsSections = (() => {
         : ''
     ].join('');
 
-    const rows = list.length
-      ? list.map((model) => modelRow(model, ai.filter, Boolean(query) && !model.toLowerCase().includes(query))).join('')
-      : '';
+    const rows = list.map((model) => modelRow(model, ai.filter, disabled, Boolean(query) && !model.toLowerCase().includes(query))).join('');
+
+    const listBody = list.length
+      ? `<div class="ai-model-list" id="ai-model-list">${rows}</div>
+        <p class="ss-note ai-model-filtered-empty" id="ai-model-no-results"${visibleModels.length ? ' hidden' : ''}>${Icons.svg('search', 15)}<span>لا يوجد موديل يطابق بحثك.</span></p>`
+      : `<div class="ss-empty" id="ai-model-empty">
+          <span class="ss-empty-icon">${Icons.svg('cpu', 17)}</span>
+          <span>لم تُجلب الموديلات بعد.</span>
+        </div>`;
 
     return `
-      <section class="settings-card card" data-section="ai-models" aria-labelledby="settings-ai-models-title">
-        <div class="card-head">
-          <div>
-            <h2 id="settings-ai-models-title">الموديلات المتاحة</h2>
-            <p>الموديلات الممنوعة لا تظهر في نافذة بدء الأتمتة، لحماية استهلاك التوكنات.</p>
-          </div>
-          <span class="chip" id="ai-model-count">${num(visibleModels.length)} موديل</span>
+      <div class="ai-models-toolbar">
+        <label class="ss-search">
+          ${Icons.svg('search', 15)}
+          <input id="ai-model-search" type="search" placeholder="ابحث باسم الموديل…" value="${esc(searchQuery)}" autocomplete="off" aria-label="بحث في الموديلات"${disabled ? ' disabled' : ''}>
+          <span class="ss-search-count" id="ai-model-count" title="عدد الموديلات المعروضة">${num(visibleModels.length)}</span>
+        </label>
+        <div class="ss-mode" role="group" aria-label="طريقة تصفية الموديلات">
+          <button type="button" class="${ai.filter.mode === 'all' ? 'is-active' : ''}" data-action="ai-filter-mode" data-mode="all"
+            aria-pressed="${ai.filter.mode === 'all'}"${disabled ? ' disabled' : ''}>السماح للجميع</button>
+          <button type="button" class="${ai.filter.mode === 'allow' ? 'is-active' : ''}" data-action="ai-filter-mode" data-mode="allow"
+            aria-pressed="${ai.filter.mode === 'allow'}"${disabled ? ' disabled' : ''}>قائمة مسموحة فقط</button>
         </div>
-        <div class="ai-models-toolbar" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
-          <label class="search-box" style="flex:1;min-width:190px">
-            ${Icons.svg('search', 17)}
-            <input id="ai-model-search" type="search" placeholder="ابحث باسم الموديل أو المزوّد…" value="${esc(searchQuery)}" autocomplete="off">
-          </label>
-          <div class="segmented" role="group" aria-label="طريقة تصفية الموديلات">
-            <button class="${ai.filter.mode === 'all' ? 'active' : ''}" data-action="ai-filter-mode" data-mode="all"${off}>السماح للجميع</button>
-            <button class="${ai.filter.mode === 'allow' ? 'active' : ''}" data-action="ai-filter-mode" data-mode="allow"${off}>قائمة مسموحة فقط</button>
-          </div>
-          <button class="btn secondary sm" data-action="ai-models-refresh"${off}>${Icons.svg('refresh', 14)} تحديث القائمة</button>
-        </div>
-        <div class="ai-models-meta" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:9px">
-          <span class="chip muted">${Icons.svg('clock', 12)} ${esc(cacheAt)}</span>
-          <span class="chip muted">${Icons.svg('check', 12)} ${num(allowedModels.length)} مسموح</span>
-          <span class="chip muted">${Icons.svg('close', 12)} ${num(blockedCount)} ممنوع</span>
-          <span class="chip muted" title="الوضع الحالي">${Icons.svg('filter', 12)} ${ai.filter.mode === 'allow' ? 'قائمة مسموحة فقط' : 'السماح للجميع'}</span>
-        </div>
-        <div class="empty-state compact" id="ai-model-empty" style="${list.length ? 'display:none' : ''};margin-top:9px">
-          <span class="empty-icon">${Icons.svg('cpu', 18)}</span>
-          <div>
-            <h3>لم تُجلب قائمة الموديلات بعد</h3>
-            <p>اجلب الموديلات من opencode، ثم اسمح بما تحتاجه فقط.</p>
-          </div>
-          <div class="empty-actions">
-            <button class="btn secondary sm" data-action="ai-models-refresh"${off}>${Icons.svg('download', 14)} جلب من opencode</button>
-          </div>
-        </div>
-        ${list.length ? `<div class="ai-model-list" style="max-height:330px;overflow-y:auto;margin-top:9px;border-top:1px solid var(--border)">${rows}</div>` : ''}
-        <div class="ai-model-filtered-empty field-hint" id="ai-model-no-results" style="${list.length && !visibleModels.length ? 'display:flex' : 'display:none'};margin-top:9px">${Icons.svg('search', 13)} لا يوجد موديل يطابق بحثك.</div>
-        <div class="field ai-default-field" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--border)">
-          <span>الموديل الافتراضي عند بدء الأتمتة</span>
-          <select id="ai-default-model" aria-label="الموديل الافتراضي"${off}>${defaultOptions}</select>
-          <p class="field-hint">${Icons.svg('info', 13)} يُقترح هذا الموديل تلقائيًا، ويمكن تغييره في كل تشغيل. تُحفظ آخر قيمة اخترتها.</p>
-        </div>
-      </section>`;
+        ${iconBtn('ai-models-refresh', 'refresh', 'تحديث قائمة الموديلات', { title: 'تحديث قائمة الموديلات', disabled })}
+      </div>
+      <div class="ss-chips">
+        <span class="chip muted" title="الموديلات المسموحة">${Icons.svg('check', 12)}${num(allowedModels.length)}</span>
+        <span class="chip muted" title="الموديلات الممنوعة">${Icons.svg('close', 12)}${num(blockedCount)}</span>
+        <span class="chip muted" title="${esc(cacheTitle)}">${Icons.svg('clock', 12)}${esc(cacheText)}</span>
+      </div>
+      ${listBody}
+      <div class="ss-select-row">
+        <label class="ss-field-label" for="ai-default-model">الموديل الافتراضي</label>
+        <select id="ai-default-model" data-action="ai-default-model" aria-label="الموديل الافتراضي"${disabled ? ' disabled' : ''}>${defaultOptions}</select>
+      </div>
+      <p class="ss-note-text">الموديلات الممنوعة لا تظهر عند بدء الأتمتة حفاظًا على التوكنات.</p>`;
   }
 
   function aiMarkup(data) {
     const ai = aiState(data);
     const desktop = isDesktop();
-    const off = desktop ? '' : ' disabled';
-    const health = currentHealth();
-    const healthLabel = !health ? 'غير معروف' : (health.available ? 'جاهز' : 'غير متصل');
+    const disabled = !desktop;
+
     return `
-      <section class="settings-section settings-ai" style="grid-column:1/-1;display:flex;flex-direction:column;gap:13px;min-width:0" aria-labelledby="settings-ai-title">
-        <div class="section-head">
+      <section class="settings-card card is-wide" data-section="ai" aria-labelledby="settings-ai-title">
+        <div class="card-head">
           <div>
             <h2 id="settings-ai-title">الأتمتة والذكاء الاصطناعي</h2>
-            <p>اتصال opencode، الموديلات المسموحة، والموديل الافتراضي لتشغيل المهام.</p>
+            <p>اتصال opencode والموديلات المتاحة للتشغيل.</p>
           </div>
-          <span class="chip muted">${healthLabel}</span>
+          <span class="settings-icon">${Icons.svg('cpu', 19)}</span>
         </div>
-        ${desktop ? '' : desktopNote('افتح التطبيق على سطح المكتب لفحص الاتصال وجلب الموديلات.')}
-        ${connectionCard(ai, desktop, off)}
-        ${modelsCard(ai, desktop, off)}
+        ${desktop ? '' : browserNote()}
+        ${connectionBlock(ai, disabled)}
+        ${modelsBlock(ai, disabled)}
       </section>`;
   }
 
@@ -668,8 +607,8 @@ const SettingsSections = (() => {
         guarded(aiCheck());
         return true;
       case 'ai-save-path': {
-        const scope = element ? element.closest('.field') : null;
-        const input = scope ? scope.querySelector('#ai-opencode-path') : document.getElementById('ai-opencode-path');
+        const row = element ? element.closest('.ss-input-row') : null;
+        const input = (row && row.querySelector('#ai-opencode-path')) || document.getElementById('ai-opencode-path');
         saveOpencodePath(input ? input.value : '');
         return true;
       }
@@ -683,6 +622,8 @@ const SettingsSections = (() => {
         aiModelToggle(element);
         return true;
       case 'ai-default-model':
+        // النقر على القائمة نفسها لا يغيّر شيئًا؛ الحفظ يتم عند change في bind.
+        if (element && element.tagName === 'SELECT') return true;
         aiDefaultModel(element);
         return true;
       default:
@@ -699,13 +640,13 @@ const SettingsSections = (() => {
     rows.forEach((row) => {
       const text = String(row.dataset.model || '').toLowerCase();
       const hit = !term || text.includes(term);
-      row.style.display = hit ? 'flex' : 'none';
+      row.hidden = !hit;
       if (hit) shown += 1;
     });
     const counter = document.getElementById('ai-model-count');
-    if (counter) counter.textContent = `${num(shown)} موديل`;
+    if (counter) counter.textContent = num(shown);
     const noResults = document.getElementById('ai-model-no-results');
-    if (noResults) noResults.style.display = rows.length && !shown ? 'flex' : 'none';
+    if (noResults) noResults.hidden = !(rows.length && !shown);
   }
 
   function bind(root) {

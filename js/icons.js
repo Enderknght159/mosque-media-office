@@ -88,7 +88,11 @@ const Icons = (() => {
     terminal: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 10 3 2.5L7 15M12.5 15.5H17"/>',
     external: '<path d="M13 4h7v7"/><path d="M20 4 10 14"/><path d="M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>',
     wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16.5 14.5h1.5"/>',
-    send: '<path d="m21 3-9.5 18-2.3-6.2L3 12.5 21 3Z"/>'
+    send: '<path d="m21 3-9.5 18-2.3-6.2L3 12.5 21 3Z"/>',
+    hash: '<path d="M9.5 3.5 7.5 20.5M16.5 3.5l-2 17M4 8.5h16M4 15.5h16"/>',
+    timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v4l2.5 1.5M9 2.5h6"/>',
+    pause: '<rect x="7.5" y="5.5" width="3.2" height="13" rx="1.2"/><rect x="13.3" y="5.5" width="3.2" height="13" rx="1.2"/>',
+    power: '<path d="M12 3v8"/><path d="M6.4 6.8a7.5 7.5 0 1 0 11.2 0"/>'
   };
 
   function svg(name, size = 20, cls = '') {

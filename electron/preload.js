@@ -47,8 +47,11 @@ contextBridge.exposeInMainWorld('MMO', {
     jobs: () => call('opencode:jobs'),
     status: (payload) => call('opencode:status', payload),
     log: (payload) => call('opencode:log', payload),
+    refresh: (payload) => call('opencode:refresh', payload),
+    ping: (payload) => call('opencode:ping', payload),
     onEvent: (callback) => subscribe('mmo:automation:event', callback),
     onUpdate: (callback) => subscribe('mmo:automation:update', callback),
-    onDone: (callback) => subscribe('mmo:automation:done', callback)
+    onDone: (callback) => subscribe('mmo:automation:done', callback),
+    onPing: (callback) => subscribe('mmo:automation:ping', callback)
   }
 });
