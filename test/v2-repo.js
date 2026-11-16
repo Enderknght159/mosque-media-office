@@ -118,7 +118,7 @@ window.MMO = {
   openExternal: async () => ({ ok: true }),
   repo: {
     pick: async () => ({ ok: true, data: { path: 'C:\\\\Media' } }),
-    detect: async () => ({ ok: true, data: { manifest: null, isRepo: false, writable: true } }),
+    detect: async (path) => { window.__detectArg = path; return ({ ok: true, data: { manifest: null, isRepo: false, writable: true } }); },
     link: async () => ({ ok: true, data: { path: 'C:\\\\Media', manifest: { repoId: 'rpo_x' }, created: true } }),
     register: async () => ({ ok: true, data: { manifest: { repoId: 'rpo_arc' } } }),
     sync: async () => ({ ok: true, data: { groups: {}, tasks: {}, absolute: { groups: {}, tasks: {} }, actions: [], warnings: [] } }),
@@ -212,6 +212,15 @@ async function waitForServer() {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     if (overflow > 2) errors.push(`repository overflows horizontally by ${overflow}px`);
 
+    await page.locator('.repo-check[data-task-id]').first().check();
+    await page.waitForTimeout(250);
+    if (!(await page.locator('.repo-bulk-bar').count())) errors.push('bulk selection toolbar did not appear');
+    await page.locator('[data-action="repo-section-menu"]').first().click();
+    await page.waitForTimeout(250);
+    if (!(await page.locator('.repo-section-menu').count())) errors.push('section actions dropdown did not open');
+    await page.keyboard.press('Escape');
+    await page.locator('[data-action="repo-clear-selection"]').click().catch(() => {});
+
     await page.goto(`${base}/#/dashboard`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     await page.screenshot({ path: path.join(shots, '33-dashboard-storage.png'), fullPage: true });
@@ -239,6 +248,19 @@ async function waitForServer() {
     const columns = await page.locator('.settings-column').count();
     if (columns !== 3) errors.push(`settings renders ${columns} columns at 1440px`);
     await page.screenshot({ path: path.join(shots, '34-settings-columns.png'), fullPage: true });
+
+    await page.goto(`${base}/#/repository`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await page.locator('[data-action="repo-link-archive"]').first().click();
+    await page.waitForTimeout(500);
+    await page.locator('[data-confirm-yes]').click();
+    await page.waitForTimeout(1200);
+    const linkCheck = await page.evaluate(() => ({
+      type: typeof window.__detectArg,
+      archives: Data.get().settings.archives.length
+    }));
+    if (linkCheck.type !== 'string') errors.push(`repo.detect received ${linkCheck.type} instead of a path string`);
+    if (linkCheck.archives !== 3) errors.push(`linking an archive did not persist (${linkCheck.archives})`);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${base}/#/repository`, { waitUntil: 'networkidle' });

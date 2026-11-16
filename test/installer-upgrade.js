@@ -3,8 +3,8 @@
 /* arabic-note: لا تُعدّل هذا الملف بمحرّر يغيّر الترميز — UTF-8 بلا BOM. */
 
 /**
- * اختبار ترقية المثبّت في المكان: 2.1.0 ← 2.2.0 دون فقد بيانات.
- * Installer in-place upgrade test: 2.1.0 → 2.2.0 without data loss.
+ * اختبار ترقية المثبّت في المكان: 2.2.0 ← 2.2.1 دون فقد بيانات.
+ * Installer in-place upgrade test: 2.2.0 → 2.2.1 without data loss.
  *
  * لماذا هذا الاختبار؟
  *   المثبّت NSIS يتعرّف على النسخة المثبّتة سابقًا عبر `appId` و`productName`
@@ -13,12 +13,12 @@
  *   ثانيًا بجانب الأول أو فقدًا لبيانات المستخدم — وهذا ما نثبته هنا.
  *
  * ما يفعله:
- *   1) يثبّت 2.1.0 صامتًا في مجلد مؤقت:  <exe> /S /D=<dir>
+ *   1) يثبّت 2.2.0 صامتًا في مجلد مؤقت:  <exe> /S /D=<dir>
  *   2) يزرع ملف تحقيق في مسار بيانات المستخدم الحقيقي: %APPDATA%\mosque-media-office
  *   3) يسجّل بصمة الملف التنفيذي (mtime/الحجم) وعدد إدخالات إزالة التثبيت
- *   4) يثبّت 2.2.0 فوقه بنفس /D
+ *   4) يثبّت 2.2.1 فوقه بنفس /D
  *   5) يتحقق: نفس المجلد، ملف تنفيذي مُستبدل، ملف التحقيق سليم بايت ببايت،
- *      إدخال إزالة تثبيت واحد فقط (لا تكرار)، والإصدار في السجل = 2.2.0
+ *      إدخال إزالة تثبيت واحد فقط (لا تكرار)، والإصدار في السجل = 2.2.1
  *   6) يزيل التثبيت صامتًا، ويتحقق أن ملف التحقيق ما زال موجودًا
  *      (deleteAppDataOnUninstall: false)، ثم ينظّف ما أنشأه.
  *
@@ -52,8 +52,8 @@ const APP_NAME = 'mosque-media-office'; // package.json name → مجلد %APPDA
 const PRODUCT_NAME = 'المكتب الإعلامي'; // electron-builder.yml productName
 
 const UNINSTALL_ROOT = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall';
-const OLD_PATTERN = /2\.1\.0.*x64\.exe$/i;
-const NEW_PATTERN = /2\.2\.0.*x64\.exe$/i;
+const OLD_PATTERN = /2\.2\.0.*x64\.exe$/i;
+const NEW_PATTERN = /2\.2\.1.*x64\.exe$/i;
 const INSTALL_TIMEOUT_MS = 180000;
 const REG_TIMEOUT_MS = 30000;
 const UNINSTALL_TIMEOUT_MS = 180000;
@@ -257,7 +257,7 @@ function restoreProbe(probeState) {
 }
 
 function main() {
-  console.log('installer upgrade test — 2.1.0 → 2.2.0 (silent /S /D=, in-place, no data loss)');
+  console.log('installer upgrade test — 2.2.0 → 2.2.1 (silent /S /D=, in-place, no data loss)');
 
   if (process.platform !== 'win32') {
     console.log(`\nتخطي: هذا الاختبار لويندوز فقط (المنصة الحالية: ${process.platform}).`);
@@ -268,15 +268,15 @@ function main() {
   const oldInstaller = findInstaller(OLD_PATTERN);
   const newInstaller = findInstaller(NEW_PATTERN);
   if (!oldInstaller || !newInstaller) {
-    console.log('\nتخطي: مثبّت 2.1.0 أو 2.2.0 غير موجود في release/');
-    console.log('SKIP: installer 2.1.0 or 2.2.0 not found in release/ (build both versions first).');
+    console.log('\nتخطي: مثبّت 2.2.0 أو 2.2.1 غير موجود في release/');
+    console.log('SKIP: installer 2.2.0 or 2.2.1 not found in release/ (build both versions first).');
     if (oldInstaller) console.log(`   الموجود: ${path.basename(oldInstaller)}`);
     if (newInstaller) console.log(`   الموجود: ${path.basename(newInstaller)}`);
     return 0;
   }
 
-  console.log(`   2.1.0: ${path.basename(oldInstaller)}`);
-  console.log(`   2.2.0: ${path.basename(newInstaller)}`);
+  console.log(`   2.2.0: ${path.basename(oldInstaller)}`);
+  console.log(`   2.2.1: ${path.basename(newInstaller)}`);
 
   const guid = uninstallKeyForAppId(APP_ID);
   // مجلد عمل خاص بالاختبار: نسخة .reg للسجل + مجلد التثبيت المستهدف.
@@ -306,11 +306,11 @@ function main() {
       }
     }
 
-    // ---------------------------------------- 1) تثبيت 2.1.0 صامتًا
-    step(`تثبيت 2.1.0 صامتًا في ${installDir}`);
+    // ---------------------------------------- 1) تثبيت 2.2.0 صامتًا
+    step(`تثبيت 2.2.0 صامتًا في ${installDir}`);
     const first = runInstaller(oldInstaller, installDir);
     if (!first.ok) {
-      check(false, `فشل تثبيت 2.1.0: ${first.message}`);
+      check(false, `فشل تثبيت 2.2.0: ${first.message}`);
       return 1;
     }
     const appExeBefore = findAppExe(installDir);
@@ -335,7 +335,7 @@ function main() {
       app: APP_ID,
       purpose: 'installer-upgrade-test',
       nonce: crypto.randomBytes(12).toString('hex'),
-      version: '2.1.0',
+      version: '2.2.0',
       at: new Date().toISOString()
     };
     fs.mkdirSync(userDataDir, { recursive: true });
@@ -348,11 +348,11 @@ function main() {
     if (beforeEntries !== null) console.log(`   إدخالات إزالة التثبيت قبل الترقية: ${beforeEntries}`);
     if (beforeVersion) console.log(`   الإصدار المسجّل قبل الترقية: ${beforeVersion}`);
 
-    // ---------------------------------------- 3) تثبيت 2.2.0 فوقه
-    step('تثبيت 2.2.0 فوق النسخة نفسها (نفس /D)');
+    // ---------------------------------------- 3) تثبيت 2.2.1 فوقه
+    step('تثبيت 2.2.1 فوق النسخة نفسها (نفس /D)');
     const second = runInstaller(newInstaller, installDir);
     if (!second.ok) {
-      check(false, `فشل تثبيت 2.2.0: ${second.message}`);
+      check(false, `فشل تثبيت 2.2.1: ${second.message}`);
       return 1;
     }
 
@@ -389,7 +389,7 @@ function main() {
 
     const afterVersion = readInstalledVersion(guid);
     if (afterVersion) {
-      const expectedVersion = (path.basename(newInstaller).match(/\d+\.\d+\.\d+/) || ['2.2.0'])[0];
+      const expectedVersion = (path.basename(newInstaller).match(/\d+\.\d+\.\d+/) || ['2.2.1'])[0];
       check(afterVersion === expectedVersion, `الإصدار المسجّل بعد الترقية ${afterVersion} (المتوقع ${expectedVersion})`);
     } else {
       warn('تعذّر قراءة DisplayVersion من السجل — تحقّق الإصدار غير متاح.');
@@ -456,7 +456,7 @@ function main() {
     console.error(`✖ فشل اختبار ترقية المثبّت — ${failures} فحص/فحوص لم تنجح.`);
     return 1;
   }
-  console.log('✓ الترقية في المكان ناجحة: 2.2.0 حلّت محل 2.1.0 دون فقد بيانات.');
+  console.log('✓ الترقية في المكان ناجحة: 2.2.1 حلّت محل 2.2.0 دون فقد بيانات.');
   return 0;
 }
 

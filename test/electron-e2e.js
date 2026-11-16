@@ -109,6 +109,8 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     fs.mkdirSync(archiveDir, { recursive: true });
     const registered = await page.evaluate(async (dir) => window.MMO.repo.register({ path: dir, role: 'archive', label: 'أرشيف الاختبار' }), archiveDir);
     check('repo:register archive ok', registered?.ok === true, JSON.stringify(registered).slice(0, 200));
+    const archiveContents = fs.readdirSync(archiveDir).filter((name) => name !== 'mosque-media-office.repo.json');
+    check('archive has no task folders before archiving', archiveContents.length === 0, archiveContents.join(', '));
     await page.evaluate(({ dir, repoId }) => {
       Data.addArchive({ repoId, path: dir, label: 'أرشيف الاختبار' });
     }, { dir: archiveDir, repoId: registered?.data?.manifest?.repoId || '' });

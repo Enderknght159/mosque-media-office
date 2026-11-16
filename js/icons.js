@@ -99,6 +99,7 @@ const Icons = (() => {
     unlink: '<path d="M8.5 15.5 7 17a4.24 4.24 0 0 1-6-6l2.2-2.2"/><path d="m15.5 8.5 1.5-1.5a4.24 4.24 0 0 1 6 6l-2.2 2.2"/><path d="m4 4 16 16"/>',
     'copy-plus': '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/><path d="M15 15h-3M13.5 12.5v5"/>',
     'rotate-ccw': '<path d="M3 4v6h6"/><path d="M4.6 15a8 8 0 1 0 1.3-8.7L3 10"/>',
+    swap: '<path d="M4 8h13M14 5l3 3-3 3"/><path d="M20 16H7M10 13l-3 3 3 3"/>',
     'trash-restore': '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M12 17v-5M9.6 14.2 12 11.8l2.4 2.4"/>'
   };
 

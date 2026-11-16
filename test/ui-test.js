@@ -77,7 +77,7 @@ async function waitForServer() {
     await page.click('.onboarding-submit');
     await page.waitForSelector('.app .sidebar');
     await page.waitForTimeout(500);
-    assert((await page.locator('.stat-card').count()) === 4, 'Dashboard stats missing');
+    assert((await page.locator('.stat-card').count()) === 5, 'Dashboard stats missing');
     assert((await page.locator('.task-card').count()) === 0, 'Task page should not be visible initially');
     await prepareShot(page);
     await page.screenshot({ path: path.join(screens, '02-dashboard-light.png'), fullPage: true });

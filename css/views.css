@@ -5,8 +5,10 @@
 .group-card h3 { margin-top: 11px; font-size: 15px; font-weight: 650; }
 .group-template { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 9.5px; color: var(--text-2); }
 .group-template .icon { color: var(--group-color); }
+/* Sits below the counter row so counters never shift; 2-line clamp with a fixed reserved height. */
 .group-desc {
-  margin: 7px 0 12px;
+  margin: 9px 0 0;
+  min-height: 34px;
   font-size: 10px;
   line-height: 1.7;
   color: var(--text-2);

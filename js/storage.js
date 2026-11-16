@@ -122,6 +122,17 @@ const Storage = (() => {
     return `${root}\\${rest}`;
   }
 
+  function normalizedPath(value) {
+    return String(value || '').replace(/[\\/]+/g, '\\').replace(/\\+$/, '').toLowerCase();
+  }
+
+  function pathInside(child, parent) {
+    const target = normalizedPath(child);
+    const root = normalizedPath(parent);
+    if (!target || !root) return false;
+    return target === root || target.startsWith(`${root}\\`);
+  }
+
   // ------------------------------------------------------------- scan
   function scanPayload({ force = false } = {}) {
     const current = data();
@@ -519,6 +530,62 @@ const Storage = (() => {
     return { ok: archived > 0, archived };
   }
 
+  async function archiveTasks(taskIds, { confirm = true, silent = false } = {}) {
+    const ids = Array.isArray(taskIds) ? taskIds.filter(Boolean) : [];
+    if (!ids.length) return { ok: false, code: 'empty-selection' };
+    if (!hasSnapshot()) await scan({ silent: true, refresh: false });
+    const tasks = ids.map((id) => data()?.tasks.find((task) => task.id === id)).filter(Boolean);
+    if (!tasks.length) return { ok: false, code: 'missing' };
+    const bytes = tasks.reduce((sum, task) => sum + (Number(task.storage?.total) || 0), 0);
+    if (confirm) {
+      const ok = await App.confirm({
+        title: 'أرشفة المهام المحددة',
+        eyebrow: 'أرشفة بعيدة المدى',
+        message: `ستُنقل ملفات ${tasks.length} مهمة (${human(bytes)}) إلى المستودع الخارجي، مع التحقق من كل ملف بالهاش قبل حذف المصدر.`,
+        confirmText: 'أرشفة المحدد'
+      });
+      if (!ok) return { ok: false, code: 'cancelled' };
+    }
+    let archived = 0;
+    for (const task of tasks) {
+      const result = await archiveTask(task.id, { confirm: false, silent: true });
+      if (result.ok) archived += 1;
+    }
+    if (!silent) {
+      App.toast(`تمت أرشفة ${archived} من ${tasks.length} مهام.`, { type: archived ? 'success' : 'warning', icon: 'archive' });
+      await scan({ silent: true, refresh: true });
+    }
+    return { ok: archived > 0, archived };
+  }
+
+  async function trashTasks(taskIds, { confirm = true, silent = false } = {}) {
+    const ids = Array.isArray(taskIds) ? taskIds.filter(Boolean) : [];
+    if (!ids.length) return { ok: false, code: 'empty-selection' };
+    const tasks = ids.map((id) => data()?.tasks.find((task) => task.id === id)).filter(Boolean);
+    if (!tasks.length) return { ok: false, code: 'missing' };
+    const bytes = tasks.reduce((sum, task) => sum + (Number(task.storage?.total) || 0), 0);
+    if (confirm) {
+      const ok = await App.confirm({
+        title: 'حذف المهام المحددة',
+        eyebrow: 'سلة المحذوفات',
+        message: `ستُنقل ملفات ${tasks.length} مهمة (${human(bytes)}) إلى سلة المحذوفات لمدة 7 أيام، ثم تُحذف سجلاتها.`,
+        confirmText: 'نقل إلى السلة',
+        danger: true
+      });
+      if (!ok) return { ok: false, code: 'cancelled' };
+    }
+    let moved = 0;
+    for (const task of tasks) {
+      const result = await trashTask(task.id, { confirm: false, silent: true });
+      if (result.ok) moved += 1;
+    }
+    if (!silent) {
+      App.toast(`نُقلت ${moved} من ${tasks.length} مهام إلى السلة.`, { type: moved ? 'success' : 'warning', icon: 'trash' });
+      await scan({ silent: true, refresh: true });
+    }
+    return { ok: moved > 0, moved };
+  }
+
   async function restoreSection(taskId, section, { confirm = true, silent = false } = {}) {
     const task = data()?.tasks.find((item) => item.id === taskId);
     const info = task?.archived?.[section];
@@ -557,7 +624,7 @@ const Storage = (() => {
     Data.unmarkArchived(taskId, section);
     Data.logStorage({ type: 'restore', taskId, section, bytes: Number(result.data?.bytes) || info.bytes, ok: true, message: `من ${source.label}` });
     if (!silent) {
-      App.toast('تمت استعادة القسم والتحقق من ملفاته.', { type: 'success', icon: 'trash-restore' });
+      App.toast('تمت استعادة القسم والتحقق من ملفاته.', { type: 'success', icon: 'undo' });
       await scan({ silent: true, refresh: true });
     }
     return result;
@@ -753,7 +820,7 @@ const Storage = (() => {
       if (entry.kind === 'group' && record.group) Data.restoreGroupRecord(record);
       if (entry.kind === 'section' && entry.meta?.archived) Data.markArchived(entry.meta.taskId, entry.meta.section, entry.meta.archived);
       Data.logStorage({ type: 'restore-trash', bytes: entry.bytes, ok: true, message: entry.originalRel || '' });
-      App.toast('تمت الاستعادة.', { type: 'success', icon: 'trash-restore' });
+      App.toast('تمت الاستعادة.', { type: 'success', icon: 'undo' });
       await scan({ silent: true, refresh: true });
       return result;
     } catch (error) {
@@ -805,7 +872,7 @@ const Storage = (() => {
     const picked = await mmo().repo.pick();
     if (!picked?.ok || !picked.data?.path) return { ok: false, canceled: true };
     const path = picked.data.path;
-    const detected = await mmo().repo.detect({ path });
+    const detected = await mmo().repo.detect(path);
     if (!detected?.ok) {
       App.toast(detected?.message || 'تعذر قراءة المجلد.', { type: 'error' });
       return { ok: false };
@@ -827,10 +894,18 @@ const Storage = (() => {
       App.toast('هذا هو المستودع الأساسي نفسه. اختر مجلدًا آخر للأرشيف.', { type: 'error' });
       return { ok: false };
     }
+    if (primary && (pathInside(path, primary.path) || pathInside(primary.path, path))) {
+      App.toast('لا يمكن أن يكون مستودع الأرشيف داخل المستودع الأساسي أو يحتويه. اختر مجلدًا منفصلًا.', { type: 'error' });
+      return { ok: false };
+    }
     const already = archives().find((item) => (manifest?.repoId && item.repoId === manifest.repoId) || item.path === path);
     if (already) {
       App.toast('هذا المستودع مربوط بالفعل.', { type: 'info' });
       return { ok: true, archive: already };
+    }
+    if (found.data.writable === false) {
+      App.toast('هذا المجلد غير قابل للكتابة. اختر مجلدًا آخر للأرشيف.', { type: 'error' });
+      return { ok: false, code: 'not-writable' };
     }
     const label = String(manifest?.name || '').trim() || path.split(/[\\/]/).filter(Boolean).pop() || 'مستودع خارجي';
     const ok = await App.confirm({
@@ -861,6 +936,10 @@ const Storage = (() => {
     if (!archive) return { ok: false };
     const found = await detectFolder();
     if (!found.ok) return found;
+    if (found.data.writable === false) {
+      App.toast('هذا المجلد غير قابل للكتابة. اختر مجلدًا آخر.', { type: 'error' });
+      return { ok: false, code: 'not-writable' };
+    }
     const manifest = found.data.manifest;
     if (manifest?.repoId && archive.repoId && manifest.repoId !== archive.repoId) {
       const ok = await App.confirm({
@@ -891,17 +970,9 @@ const Storage = (() => {
   async function unlinkArchive(archiveId) {
     const archive = archiveFor(archiveId);
     if (!archive) return { ok: false };
-    const ok = await App.confirm({
-      title: 'فك ربط المستودع',
-      eyebrow: 'أرشفة طويلة الأمد',
-      message: `سيفقد التطبيق الوصول إلى «${archive.label}». الملفات تبقى كما هي على القرص، ويمكن ربطها لاحقًا.`,
-      confirmText: 'فك الربط',
-      danger: true
-    });
-    if (!ok) return { ok: false };
     Data.removeArchive(archive.id);
     Data.logStorage({ type: 'unlink-archive', ok: true, message: archive.label });
-    App.toast('فُك ربط المستودع.', { type: 'success' });
+    App.toast('فُك ربط المستودع.', { type: 'success', icon: 'unlink' });
     return { ok: true };
   }
 
@@ -934,10 +1005,12 @@ const Storage = (() => {
     unlinkArchive,
     archiveSection,
     archiveTask,
+    archiveTasks,
     archiveGroup,
     restoreSection,
     trashSection,
     trashTask,
+    trashTasks,
     trashGroup,
     trashList,
     trashRestore,

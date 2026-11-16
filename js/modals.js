@@ -470,7 +470,7 @@ const Modals = (() => {
           <span class="task-storage-pct">${pctOf(bytes)}%</span>
           <span class="task-storage-actions icon-actions">
             ${archived
-              ? `<button type="button" class="icon-btn mini" data-action="restore-section" data-task-id="${task.id}" data-section="${section.key}" title="${restoreTitle}" aria-label="${restoreTitle}">${Icons.svg('trash-restore', 15)}</button>`
+              ? `<button type="button" class="icon-btn mini" data-action="restore-section" data-task-id="${task.id}" data-section="${section.key}" title="${restoreTitle}" aria-label="${restoreTitle}">${Icons.svg('undo', 15)}</button>`
               : `<button type="button" class="icon-btn mini" data-action="archive-section" data-task-id="${task.id}" data-section="${section.key}" title="${archiveTitle}" aria-label="${archiveTitle}">${Icons.svg('archive', 15)}</button>`}
             <button type="button" class="icon-btn mini is-danger" data-action="trash-section" data-task-id="${task.id}" data-section="${section.key}" title="${trashTitle}" aria-label="${trashTitle}">${Icons.svg('trash', 15)}</button>
           </span>

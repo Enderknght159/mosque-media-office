@@ -125,9 +125,9 @@ const SettingsSections = (() => {
         </div>
         <div class="icon-actions">
           ${iconBtn('repo-sync', 'refresh', 'مزامنة المستودع الآن', { title: 'مزامنة الآن', disabled })}
-          ${iconBtn('repo-relink', 'folder', 'تغيير مجلد المستودع', { title: 'تغيير المستودع', disabled })}
+          ${iconBtn('repo-relink', 'swap', 'تغيير مجلد المستودع', { title: 'تغيير المستودع', disabled })}
           ${iconBtn('repo-reveal', 'folder-open', 'فتح مجلد المستودع', { title: 'فتح المجلد', disabled })}
-          ${iconBtn('repo-unlink', 'trash', 'فك ربط المستودع', { title: 'فك الربط', danger: true, disabled })}
+          ${iconBtn('repo-unlink', 'unlink', 'فك ربط المستودع', { title: 'فك الربط', danger: true, disabled })}
         </div>
       </div>
       <div class="ss-mono-row" dir="ltr" title="${esc(path)}">
@@ -413,6 +413,10 @@ const SettingsSections = (() => {
     if (!isDesktop()) {
       toast(DESKTOP_ONLY, 'info', 'monitor');
       return;
+    }
+    if (Data.securityEnabled() && !Data.isUnlocked()) {
+      const unlocked = await Modals.requestUnlock();
+      if (!unlocked) return;
     }
     const ok = await App.confirm({
       title: 'فك ربط المستودع',

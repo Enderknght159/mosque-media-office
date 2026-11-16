@@ -146,12 +146,12 @@ const Views = (() => {
       </div>`;
   }
 
-  function statCard({ icon, color, label, value, note, trend }) {
+  function statCard({ icon, color, label, value, note, trend, trendTone = '' }) {
     return `
       <div class="stat-card card" style="--stat-color:${color}">
         <div class="stat-card-top">
           <span class="stat-icon">${Icons.svg(icon, 20)}</span>
-          ${trend ? `<span class="stat-trend">${trend}</span>` : ''}
+          ${trend ? `<span class="stat-trend ${trendTone ? `is-${trendTone}` : ''}">${trend}</span>` : ''}
         </div>
         <strong class="stat-value">${value}</strong>
         <span class="stat-label">${Utils.esc(label)}</span>
@@ -193,38 +193,23 @@ const Views = (() => {
     return `<span class="storage-chip compact" title="${Utils.esc(title)}">${Icons.svg('hard-drive', 12)}${Utils.esc(api.format(bytes))}</span>`;
   }
 
-  /** بطاقة مساحة الوسائط في الرئيسية: سطر هادئ لا يزاحم بطاقات الإحصاء الأربع. */
-  function dashboardStorageCard() {
+  /** بطاقة مساحة الوسائط: البطاقة الخامسة في شبكة الإحصاءات، بلا شريط ولا سطر أقسام. */
+  function storageStatCard() {
     const api = storageApi();
-    const ready = mediaReady();
-    const snapshot = ready ? api.snapshot() : null;
+    const snapshot = mediaReady() ? api.snapshot() : null;
     const totals = snapshot?.totals || {};
-    const sections = snapshot?.sections || {};
     const used = Number(totals.used) || 0;
     const capacity = Number(totals.capacity) || 0;
-    const free = capacity ? Math.max(0, capacity - used) : 0;
     const pct = api && capacity ? api.percent(used, capacity) : 0;
-    const value = ready ? api.format(used) : '—';
-    const note = ready
-      ? `من أصل ${api.human(capacity)} · المتاح ${api.human(free)}`
-      : 'لم يُفحص المستودع بعد';
-    const sectionsLine = ready
-      ? `المصادر ${api.human(sections.sources || 0)} · المخرجات ${api.human(sections.output || 0)} · opencode ${api.human(sections.opencode || 0)}`
-      : 'اربط مستودعًا لفحص مساحة الوسائط';
-    return `
-      <section class="dash-storage card" aria-label="مساحة الوسائط">
-        <div class="dash-storage-row">
-          <span class="dash-storage-icon">${Icons.svg('hard-drive', 17)}</span>
-          <span class="dash-storage-text">
-            <span class="dash-storage-label">مساحة الوسائط</span>
-            <span class="dash-storage-note">${Utils.esc(note)}</span>
-          </span>
-          <strong class="dash-storage-value">${Utils.esc(value)}</strong>
-          <a class="text-link dash-storage-link" href="#/repository" data-nav="repository">إدارة المستودع ${Icons.svg('chevron-left', 13)}</a>
-        </div>
-        ${ready ? `<span class="dash-storage-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="نسبة استخدام مساحة الوسائط"><i style="width:${pct}%"></i></span>` : ''}
-        <div class="dash-storage-sections">${Utils.esc(sectionsLine)}</div>
-      </section>`;
+    return statCard({
+      icon: 'hard-drive',
+      color: '#30b0c7',
+      label: 'مساحة الوسائط',
+      value: snapshot ? Utils.esc(api.format(used)) : '—',
+      note: snapshot ? Utils.esc(`من ${api.human(capacity)}`) : 'لم يُفحص المستودع بعد',
+      trend: snapshot && pct ? `${pct}%` : '',
+      trendTone: 'info'
+    });
   }
 
   function logo(data) {
@@ -631,13 +616,11 @@ const Views = (() => {
                   return `<th><span class="stage-head">${Icons.svg(type.icon, 13)}${Utils.esc(column)}</span></th>`;
                 }).join('')}
                 ${showStorage ? '<th class="col-storage">المساحة</th>' : ''}
-                <th>التقدم</th>
               </tr>
             </thead>
             <tbody>
               ${list.map((task) => {
                 const group = Data.findGroup(task.groupId);
-                const progress = Data.taskProgress(task);
                 const isDone = Data.taskStatus(task) === 'done';
                 return `
                   <tr class="${isDone ? 'is-done' : ''}">
@@ -650,7 +633,6 @@ const Views = (() => {
                     <td>${groupChip(group)}</td>
                     ${columns.map((column) => stageTableCell(task, column)).join('')}
                     ${showStorage ? taskTableStorageCell(task) : ''}
-                    <td><span class="table-progress">${progress.done}/${progress.total}</span></td>
                   </tr>`;
               }).join('')}
             </tbody>
@@ -788,8 +770,8 @@ const Views = (() => {
           value: Utils.formatNumber(overview.overdue),
           note: overview.overdue ? 'تحتاج إلى متابعة عاجلة' : 'لا توجد مهام متأخرة'
         })}
+        ${storageStatCard()}
       </div>
-      ${dashboardStorageCard()}
       ${shortcutsSection(data)}
       ${empty ? `
         <section class="card empty-dashboard">
@@ -1006,7 +988,6 @@ const Views = (() => {
                 </div>
               </div>
               <h3>${Utils.esc(item.group.name)}</h3>
-              ${item.group.description ? `<p class="group-desc">${Utils.esc(item.group.description)}</p>` : ''}
               ${assigneeIds.length ? `
                 <div class="group-assignees">
                   <span class="group-assignee-avatars">${assigneeIds.slice(0, 4).map((userId) => avatar(Data.findUser(userId), 'xs')).join('')}</span>
@@ -1022,6 +1003,7 @@ const Views = (() => {
                 <span class="group-stat ${item.overdue ? 'danger-text' : ''}" title="${Utils.formatNumber(item.overdue)} متأخرة">${Icons.svg('alert', 13)}<b>${Utils.formatNumber(item.overdue)}</b><small>متأخرة</small></span>
                 ${sizeChip}
               </div>
+              ${item.group.description ? `<p class="group-desc">${Utils.esc(item.group.description)}</p>` : ''}
               <div class="group-card-actions icon-actions">
                 <button class="icon-btn sm" data-action="view-group-tasks" data-group-id="${item.group.id}" title="فتح مهام المجموعة" aria-label="فتح مهام المجموعة">${Icons.svg('tasks', 16)}</button>
                 <button class="icon-btn sm" data-action="add-task" data-group-id="${item.group.id}" title="إضافة مهمة إلى المجموعة" aria-label="إضافة مهمة إلى المجموعة">${Icons.svg('plus', 16)}</button>
