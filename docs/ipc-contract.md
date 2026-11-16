@@ -316,3 +316,146 @@ const SettingsSections = {
 | E | `js/settings-sections.js`, `scripts/build-electron.js`, `electron-builder.yml`, `assets/icon.png` |
 
 ممنوع على أي وكيل تعديل ملف لا يملكه. أي حاجة لعنصر مشترك → اطلبها في تقريرك النهائي.
+
+## 7. عقود v2.2 — التخزين والأرشفة والسلة
+
+> المرجع التصميمي: `docs/v2.2-plan.md` §4.3. الأسماء والأشكال أدناه هي **المنفّذة فعليًا** في
+> `electron/storage.js`, `electron/archive.js`, `electron/repo.js`, `electron/main.js`
+> و`electron/preload.js`. كل اختلاف عن مسوّدة الخطة مذكور صراحة في §7.5.
+
+### 7.0 قواعد إلزامية في هذه المجموعة
+
+- كل قناة تُسجّل عبر `guard` نفسه: `{ ok: true, data }` أو `{ ok: false, message, code }`.
+- كل مسار قادم من الواجهة **نسبي للمستودع** ويُحل داخل جذره عبر `resolveInside` نفسه في
+  `electron/repo.js`. أي مسار خارج الجذر يُرفض (`path-escape`)، والنقل فوق جذر المستودع
+  أو بين مستودعين متداخلين يُرفض (`repo-overlap`).
+- النقل (أرشفة/استعادة/سلة) لا يحذف المصدر قبل: نسخ إلى `.incoming/<uuid>.part` → إعادة قراءة
+  الوجهة → حساب **SHA-256** للأصل والنسخة → مطابقة تامة → إعادة تسمية ذرّية → كتابة الإيصال
+  في `.mmo-archive/index/` → **وبعدها فقط** حذف المصدر. أي فشل/إلغاء ينظّف `.incoming` ويترك
+  المصدر سليمًا.
+- `.trash` و`.mmo-archive` و`.incoming` مستثناة من كل حسابات المساحة، ولا تُعدّ أقسام مهمة.
+- إن كانت الإعدادات مقفلة بكلمة مرور: الأرشفة مسموحة (لا تُفقد بيانات)، والحذف/الإفراغ يتطلبان فتح القفل.
+
+### 7.1 التخزين — `electron/storage.js`
+
+```ts
+storage:scan({ repos, tasks, force? })
+  -> {
+       scannedAt,
+       totals: { used, free, capacity },
+       sections: { sources, output, opencode, other, trash, total },
+       repos: {
+         [repoId]: { used, free, capacity, sections, online, scannedAt }
+       },
+       tasks: {
+         [taskId]: { sources, output, opencode, total, files, exists }
+       }
+     }
+// repos: [{ id | repoId, path, role: 'primary'|'archive', ... }]
+// force يتجاوز كاش 60 ثانية. المستودع غير المتصل يعود online:false بأرقامه المعروفة من سجل الأرشفة.
+
+storage:locate({ items: [{ id, path, rel, role?, label?, sections? }] })
+  -> { locations: [{ id, role: 'primary'|'archive', label, path, rel, sections, absolute, exists }] }
+// العنصر الذي جذره مفقود أو مساره خارج الجذر يُسقط وحده (لا يفشل الاستدعاء كله).
+
+storage:volume({ path })
+  -> { label, serial, fs, total, free }
+// على ويندوز عبر Get-CimInstance Win32_LogicalDisk بلا صلاحيات مدير، وfallback إلى fs.statfs.
+```
+
+حدث التقدم: `mmo:storage:progress` → `{ repoId, phase: 'scan', files, bytes }` (كل 250ms تقريبًا)،
+يُبثّ للنافذة الحية فقط.
+
+### 7.2 المستودعات — `electron/repo.js`
+
+```ts
+repo:register({ path, role?: 'archive', label? })
+  -> { path, manifest, created }      // يربط مجلدًا كمستودع أرشيفي دون تغيير المستودع النشط
+repo:forget()
+  -> { forgotten: true }              // ينسى المستودع النشط على هذا الجهاز فقط
+repo:readManifest({ repoPath })       -> { manifest }
+store:readMirror()                    -> { snapshot: string|null, path }
+store:writeMirror({ snapshot })       -> { path } | { path: null, skipped: true }
+```
+
+الهوية: `mosque-media-office.repo.json` يحمل `repoId` (`rpo_…`) و`schema` و`kind` والدور.
+`repo:detect` يقرؤه للتحقق من مستودع موجود، و`repo:register` ينشئه عند الحاجة — وبهذا
+تُعاد ربط المستودع عند تغيّر حرف القرص (`repoId` نفسه، مسار جديد).
+
+### 7.3 الأرشيف — `electron/archive.js`
+
+```ts
+archive:start({ taskId, section: 'sources'|'output'|'opencode', from: { path }, to: { path }, rel, sectionRel? })
+  -> { jobId }
+archive:restore({ ...نفس الشكل })
+  -> { jobId }                        // نفس محرك النقل بالاتجاه المعاكس
+archive:cancel({ jobId })
+  -> { cancelled: boolean }
+archive:reconcile({ repoPath })       // أو path
+  -> { pending: [{ taskId, section, reason, sourcePath? }] }
+// reason: 'source-present' | 'both-present' | 'receipt-incomplete' | 'source-path-invalid'
+```
+
+- `from` و`to` جذران مطلقان (المستودع الأساسي ومستودع الأرشيف)؛ يجب أن يكونا منفصلين تمامًا.
+- `rel` مسار المهمة النسبي داخل المستودع المصدر. `sources` يستخدم مجلد المهمة نفسه،
+  و`output`/`opencode` يقبلان المسار مع القسم أو بدونه.
+- إلغاء عبر `AbortController` لكل مهمة، وطابور واحد لكل مجلد وجهة (لا نقلان متوازيان لنفس القرص).
+
+الأحداث:
+
+```ts
+mmo:archive:progress -> { jobId, phase, file, filesDone, filesTotal, bytesDone, bytesTotal }
+mmo:archive:done     -> { jobId, ok: true, data: { bytes, files, receipt } }
+                      | { jobId, ok: false, error, code? }
+// code: 'cancelled' | 'source-delete-failed' | رمز الخطأ الداخلي
+```
+
+### 7.4 السلة — `electron/archive.js`
+
+```ts
+trash:move({ repoPath, rel, section?, whole?, meta? })
+  -> { entry }
+trash:list({ repoPath })
+  -> { entries: [entry] }
+trash:restore({ repoPath, entryId })
+  -> { restoredTo, entry }
+trash:delete({ repoPath, entryId })
+  -> { removed: 1, id }
+trash:purge({ repoPath })
+  -> { removed, bytes }
+```
+
+- `trash:move` يقبل `whole: true` لحذف مجلد المهمة كاملًا، أو `section` لقسم واحد.
+- `entry` = محتوى `entry.json` + `daysLeft` + `expired`:
+  `{ schema, id, repoId, kind:'task'|'group'|'section', taskId, groupId, section, originalRel, createdAt, expiresAt, bytes, files, record?, recordOmitted?, daysLeft, expired }`
+- النقل للسلة داخل نفس القرص = `rename` ذرّي؛ عبر أقراص = نسخ متحقق ثم حذف.
+- العمر 7 أيام ثابتة (`expiresAt`)، والفحص عند الإقلاع وكل 24 ساعة وعند فتح التبويب.
+  الحذف النهائي إجراء صريح منفصل (`trash:delete` / `trash:purge`).
+- الاستعادة تُرجع الشجرة إلى `originalRel`، وإن وُجد `record` تُستعاد المهمة/المجموعة نفسها.
+
+الحدث: `mmo:trash:changed -> { repoPath }` بعد أي نقل/استعادة/حذف/إفراغ.
+
+### 7.5 النسخ الاحتياطي قبل الترحيل — `electron/main.js`
+
+```ts
+store:backup({ snapshot, label? })
+  -> { path }
+// snapshot: نص JSON كامل (حتى 60MB). يُكتب في:
+//   %APPDATA%\mosque-media-office\backups\<label>-<timestamp>.json
+// قبل أول كتابة بعد الترقية إلى v3 يكون label = 'pre-v3'.
+```
+
+### 7.6 فروق عن مسوّدة الخطة (ملزمة)
+
+| المسوّدة (§4.3) | المنفّذ | السبب |
+|---|---|---|
+| `storage:locate({ taskId, folder, archived, archives })` | `storage:locate({ items: [...] })` | نفس الدالة تخدم المهمة والمجموعة وقائمة «فتح المجلد» بلا منطق مكرر. |
+| `archive:start({ sections: string[] })` | `archive:start({ section })` | النقل قسم واحد لكل عملية: إيصال أدق، إلغاء أوضح، وطابور وجهة واحد. |
+| `repo:capacities`, `repo:relink` | `repo:register`, `storage:volume` | السعة تُقاس داخل `storage:scan`/`storage:volume`، وإعادة الربط = `repo:register` بمسار جديد ثم تحديث سجل الأرشيف. |
+| `archive:progress/archive:done` | `mmo:archive:progress` / `mmo:archive:done` | كل الأحداث في المساحة المسبقة `mmo:` كما في بقية التطبيق. |
+| `trash:*` بمعرّف `repoId` | `trash:*` بـ`repoPath` | المصدر الوحيد للحقيقة هو الجذر المطلق بعد فحصه؛ `repoId` يبقى في `entry.json` للمراجعة. |
+
+> ملاحظة تنفيذ: لا توجد قناة `storage:recover` ولا فحص خلفي لأحرف الأقراص. إعادة الربط تتم يدويًا من
+> بطاقة المستودع الخارجي عبر `repo:pick` + `repo:detect` + `repo:register` ثم تحديث سجل الأرشيف،
+> مع مقارنة `repoId` وطلب تأكيد عند اختلافه.
+

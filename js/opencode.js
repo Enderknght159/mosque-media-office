@@ -325,6 +325,11 @@ const Opencode = (() => {
     })();
     if (!task) return { ok: false, message: 'المهمة غير موجودة.' };
 
+    const archived = task.archived || {};
+    if (archived.sources || archived.opencode) {
+      return { ok: false, message: 'هذه المهمة مؤرشفة جزئيًا أو كليًا. استعد المصادر وopencode من المستودع قبل التشغيل.' };
+    }
+
     const repo = repoStatus();
     if (!repo.linked || !repo.path) {
       return { ok: false, message: 'اربط مستودعًا من الإعدادات قبل تشغيل الأتمتة.' };

@@ -7,6 +7,7 @@ const Views = (() => {
     team: { label: 'الأعضاء', section: 'الفريق', title: 'فريق المكتب', subtitle: 'أسماء بلا كلمات مرور، مع توثيق اسم العضو عند كل إنجاز.' },
     reports: { label: 'التقارير', section: 'الفريق', title: 'التقارير والإحصاءات', subtitle: 'قراءة أعمق للإنجاز حسب الفترة والمجموعة والعضو.' },
     automation: { label: 'الأتمتة', section: 'الإنتاج', title: 'الأتمتة', subtitle: 'تشغيل الذكاء الاصطناعي على مهام المكتب، ومتابعة التكلفة والنتائج.' },
+    repository: { label: 'المستودع', section: 'التخزين', title: 'المستودع والأرشيف', subtitle: 'مساحة الوسائط، الأرشفة طويلة الأمد، وسلة المحذوفات.' },
     settings: { label: 'الإعدادات', section: 'النظام', title: 'الإعدادات', subtitle: 'تخصيص هوية المسجد والاختصارات وإدارة نسخ البيانات.' }
   };
 
@@ -158,6 +159,74 @@ const Views = (() => {
       </div>`;
   }
 
+  // ===== Storage (media folder) helpers =====
+  // Storage is optional: browser mode has no MMO bridge, so every call is guarded.
+
+  function storageApi() {
+    try {
+      const api = window.Storage;
+      return api && typeof api.hasSnapshot === 'function' ? api : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function mediaReady() {
+    const api = storageApi();
+    try {
+      return Boolean(api && api.hasSnapshot());
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function taskStorageMarkup(task) {
+    if (!mediaReady()) return '';
+    const api = storageApi();
+    const bytes = Number(task?.storage?.total) || 0;
+    if (!bytes) return '';
+    const sections = (api.sectionsFor ? api.sectionsFor(task) : [])
+      .filter((section) => section.bytes > 0)
+      .map((section) => `${section.label} ${api.human(section.bytes)}`)
+      .join(' · ');
+    const title = sections || `مساحة المهمة ${api.human(bytes)}`;
+    return `<span class="storage-chip compact" title="${Utils.esc(title)}">${Icons.svg('hard-drive', 12)}${Utils.esc(api.format(bytes))}</span>`;
+  }
+
+  /** بطاقة مساحة الوسائط في الرئيسية: سطر هادئ لا يزاحم بطاقات الإحصاء الأربع. */
+  function dashboardStorageCard() {
+    const api = storageApi();
+    const ready = mediaReady();
+    const snapshot = ready ? api.snapshot() : null;
+    const totals = snapshot?.totals || {};
+    const sections = snapshot?.sections || {};
+    const used = Number(totals.used) || 0;
+    const capacity = Number(totals.capacity) || 0;
+    const free = capacity ? Math.max(0, capacity - used) : 0;
+    const pct = api && capacity ? api.percent(used, capacity) : 0;
+    const value = ready ? api.format(used) : '—';
+    const note = ready
+      ? `من أصل ${api.human(capacity)} · المتاح ${api.human(free)}`
+      : 'لم يُفحص المستودع بعد';
+    const sectionsLine = ready
+      ? `المصادر ${api.human(sections.sources || 0)} · المخرجات ${api.human(sections.output || 0)} · opencode ${api.human(sections.opencode || 0)}`
+      : 'اربط مستودعًا لفحص مساحة الوسائط';
+    return `
+      <section class="dash-storage card" aria-label="مساحة الوسائط">
+        <div class="dash-storage-row">
+          <span class="dash-storage-icon">${Icons.svg('hard-drive', 17)}</span>
+          <span class="dash-storage-text">
+            <span class="dash-storage-label">مساحة الوسائط</span>
+            <span class="dash-storage-note">${Utils.esc(note)}</span>
+          </span>
+          <strong class="dash-storage-value">${Utils.esc(value)}</strong>
+          <a class="text-link dash-storage-link" href="#/repository" data-nav="repository">إدارة المستودع ${Icons.svg('chevron-left', 13)}</a>
+        </div>
+        ${ready ? `<span class="dash-storage-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="نسبة استخدام مساحة الوسائط"><i style="width:${pct}%"></i></span>` : ''}
+        <div class="dash-storage-sections">${Utils.esc(sectionsLine)}</div>
+      </section>`;
+  }
+
   function logo(data) {
     const custom = data?.settings?.logo;
     if (custom) {
@@ -206,6 +275,8 @@ const Views = (() => {
           <div class="nav-section">الفريق</div>
           ${navLink('team', route, 'users', 'الأعضاء')}
           ${navLink('reports', route, 'chart', 'التقارير')}
+          <div class="nav-section">التخزين</div>
+          ${navLink('repository', route, 'hard-drive', 'المستودع')}
           <div class="nav-section">النظام</div>
           ${navLink('settings', route, 'settings', 'الإعدادات')}
         </nav>
@@ -261,7 +332,7 @@ const Views = (() => {
   }
 
   function renderBottomNav(route, data) {
-    const moreRoutes = ['templates', 'team', 'settings'];
+    const moreRoutes = ['templates', 'team', 'settings', 'repository'];
     const moreActive = moreRoutes.includes(route);
     return `
       <nav class="bottom-nav no-print" aria-label="تنقل الجوال">
@@ -365,7 +436,7 @@ const Views = (() => {
               <button class="icon-btn mini" data-action="toggle-menu" title="خيارات المهمة" aria-label="خيارات المهمة">${Icons.svg('more', 17)}</button>
               <div class="menu-pop card">
                 <button data-action="edit-task" data-task-id="${task.id}">${Icons.svg('edit', 16)} تعديل</button>
-                <button data-action="duplicate-task" data-task-id="${task.id}">${Icons.svg('copy', 16)} تكرار</button>
+                <button data-action="duplicate-task" data-task-id="${task.id}">${Icons.svg('copy-plus', 16)} تكرار</button>
                 <button class="danger" data-action="delete-task" data-task-id="${task.id}">${Icons.svg('trash', 16)} حذف</button>
               </div>
             </div>
@@ -387,6 +458,7 @@ const Views = (() => {
         <footer class="task-footer">
           <span class="task-assignee">${avatar(assignee, 'xs')}<span>${assignee ? Utils.esc(assignee.name) : 'غير مسند'}</span></span>
           <span class="task-footer-meta">
+            ${taskStorageMarkup(task)}
             ${dateISO ? `<span class="task-date-chip" title="${Utils.esc(dateTitle)}" aria-label="${Utils.esc(dateTitle)}">${Icons.svg('calendar', 12)}<span class="task-date-text">${Utils.esc(Utils.fmtDayMonth(dateISO))}</span></span>` : ''}
             ${task.dueDate ? `<span class="due-chip tone-${due.tone}" title="تاريخ الاستحقاق">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>` : ''}
           </span>
@@ -415,6 +487,7 @@ const Views = (() => {
           <small>${progress.done}/${progress.total}</small>
         </span>
         <span class="task-row-dates">
+          ${taskStorageMarkup(task)}
           ${dateISO ? `<span class="task-date-chip" title="${Utils.esc(dateTitle)}" aria-label="${Utils.esc(dateTitle)}">${Icons.svg('calendar', 12)}<span class="task-date-text">${Utils.esc(Utils.fmtDayMonth(dateISO))}</span></span>` : ''}
           ${task.dueDate ? `<span class="due-chip tone-${due.tone}" title="تاريخ الاستحقاق">${Icons.svg('calendar', 13)} ${Utils.esc(due.text)}</span>` : ''}
         </span>
@@ -527,8 +600,23 @@ const Views = (() => {
       </td>`;
   }
 
+  function taskTableStorageCell(task) {
+    const api = storageApi();
+    const bytes = Number(task?.storage?.total) || 0;
+    if (!bytes) return `<td class="col-storage"><span class="muted-cell">—</span></td>`;
+    const sections = (api?.sectionsFor ? api.sectionsFor(task) : [])
+      .filter((section) => section.bytes > 0)
+      .map((section) => `${section.label} ${api.human(section.bytes)}`)
+      .join(' · ');
+    return `
+      <td class="col-storage" title="${Utils.esc(sections || 'مساحة المهمة')}">
+        <span class="table-storage">${Icons.svg('hard-drive', 12)}${Utils.esc(api.format(bytes))}</span>
+      </td>`;
+  }
+
   function taskTable(list, filters) {
     const columns = taskStageColumns(list, filters);
+    const showStorage = mediaReady();
     return `
       <div class="task-table-card card">
         <div class="task-table-note">${Icons.svg('info', 14)} انقر على أي خلية في الجدول لعرض العضو المنجز وتعديله.</div>
@@ -542,6 +630,7 @@ const Views = (() => {
                   const type = Data.stageType(column);
                   return `<th><span class="stage-head">${Icons.svg(type.icon, 13)}${Utils.esc(column)}</span></th>`;
                 }).join('')}
+                ${showStorage ? '<th class="col-storage">المساحة</th>' : ''}
                 <th>التقدم</th>
               </tr>
             </thead>
@@ -560,6 +649,7 @@ const Views = (() => {
                     </td>
                     <td>${groupChip(group)}</td>
                     ${columns.map((column) => stageTableCell(task, column)).join('')}
+                    ${showStorage ? taskTableStorageCell(task) : ''}
                     <td><span class="table-progress">${progress.done}/${progress.total}</span></td>
                   </tr>`;
               }).join('')}
@@ -699,6 +789,7 @@ const Views = (() => {
           note: overview.overdue ? 'تحتاج إلى متابعة عاجلة' : 'لا توجد مهام متأخرة'
         })}
       </div>
+      ${dashboardStorageCard()}
       ${shortcutsSection(data)}
       ${empty ? `
         <section class="card empty-dashboard">
@@ -835,7 +926,9 @@ const Views = (() => {
       { value: 'updated', label: 'الأحدث تحديثًا', icon: 'clock' },
       { value: 'due', label: 'تاريخ الاستحقاق', icon: 'calendar' },
       { value: 'priority', label: 'الأولوية', icon: 'flag' },
-      { value: 'oldest', label: 'الأقدم', icon: 'history' }
+      { value: 'oldest', label: 'الأقدم', icon: 'history' },
+      { value: 'storage-desc', label: 'المساحة (الأكبر)', icon: 'hard-drive' },
+      { value: 'storage-asc', label: 'المساحة (الأصغر)', icon: 'sort' }
     ];
     return `
       ${pageHead('المهام', `${Utils.formatNumber(data.tasks.length)} مهمة إجمالًا · ${Utils.formatNumber(counts.progress)} قيد العمل`, `<button class="btn primary" data-action="add-task">${Icons.svg('plus', 17)} مهمة جديدة</button>`)}
@@ -882,13 +975,18 @@ const Views = (() => {
 
   function groups(data) {
     const summaries = Data.allGroupSummaries();
+    const api = storageApi();
+    const showSize = mediaReady();
     return `
       ${pageHead('المجموعات', `${Utils.formatNumber(data.groups.length)} مجموعات مرتبطة بقوالب موحدة`, `<button class="btn primary" data-action="add-group">${Icons.svg('plus', 17)} مجموعة جديدة</button>`)}
       <div class="groups-grid">
         ${summaries.map((item) => {
-          const template = Data.findTemplate(item.group.templateId);
           const assigneeIds = [...new Set(Object.values(item.group.stageAssignees || {}))];
-          const assignedStages = Object.keys(item.group.stageAssignees || {}).length;
+          const bytes = Number(item.bytes) || 0;
+          const open = Number(item.progress) + Number(item.fresh);
+          const sizeChip = showSize && bytes
+            ? `<a class="group-stat group-stat-size" href="#/repository" data-nav="repository" title="مساحة المجموعة ${Utils.esc(api.human(bytes))} — إدارة المستودع">${Icons.svg('hard-drive', 13)}<b>${Utils.esc(api.format(bytes))}</b></a>`
+            : '';
           return `
             <article class="group-card card" style="--group-color:${item.group.color}">
               <div class="group-card-head">
@@ -897,6 +995,7 @@ const Views = (() => {
                   ${item.group.folder || window.MMO?.repo
                     ? folderButton({ groupId: item.group.id, name: 'فتح مجلد المجموعة', folder: item.group.folder || '', size: 'sm', iconSize: 16 })
                     : ''}
+                  <button class="icon-btn sm" data-action="archive-group" data-group-id="${item.group.id}" title="أرشفة المجموعة" aria-label="أرشفة المجموعة">${Icons.svg('archive', 16)}</button>
                   <div class="menu-wrap">
                     <button class="icon-btn sm" data-action="toggle-menu" title="خيارات المجموعة" aria-label="خيارات المجموعة">${Icons.svg('more', 17)}</button>
                     <div class="menu-pop card">
@@ -907,23 +1006,21 @@ const Views = (() => {
                 </div>
               </div>
               <h3>${Utils.esc(item.group.name)}</h3>
-              ${item.group.folder ? `<span class="group-folder-path" title="${Utils.esc(item.group.folder)}">${Icons.svg('folder', 12)} ${Utils.esc(item.group.folder)}</span>` : ''}
-              <p class="group-template">${Icons.svg('template', 14)} ${Utils.esc(template?.name || 'بدون قالب')}</p>
-              ${item.group.description ? `<p class="group-desc">${Utils.esc(item.group.description)}</p>` : '<p class="group-desc muted">لا يوجد وصف للمجموعة.</p>'}
-              ${assignedStages ? `
+              ${item.group.description ? `<p class="group-desc">${Utils.esc(item.group.description)}</p>` : ''}
+              ${assigneeIds.length ? `
                 <div class="group-assignees">
                   <span class="group-assignee-avatars">${assigneeIds.slice(0, 4).map((userId) => avatar(Data.findUser(userId), 'xs')).join('')}</span>
-                  <span>${Utils.formatNumber(assignedStages)} من ${Utils.formatNumber(template?.stages.length || 0)} مرحلة مسندة</span>
-                </div>` : '<div class="group-assignees muted">كل المراحل عامة</div>'}
-              <div class="group-progress-head">
-                <span>${item.done} من ${item.total} مهمة مكتملة</span>
-                <strong>${item.pct}%</strong>
+                  <span>${Utils.formatNumber(assigneeIds.length)} أعضاء مسندين</span>
+                </div>` : ''}
+              <div class="group-progress-head" title="${Utils.formatNumber(item.done)} من ${Utils.formatNumber(item.total)} مهمة مكتملة">
+                <span>${Utils.formatNumber(item.done)}/${Utils.formatNumber(item.total)} · ${item.pct}%</span>
               </div>
               ${progressBar(item.pct, item.group.color)}
               <div class="group-stats">
-                <span><strong>${Utils.formatNumber(item.total)}</strong><small>مهام</small></span>
-                <span><strong>${Utils.formatNumber(item.progress + item.fresh)}</strong><small>مفتوحة</small></span>
-                <span class="${item.overdue ? 'danger-text' : ''}"><strong>${Utils.formatNumber(item.overdue)}</strong><small>متأخرة</small></span>
+                <span class="group-stat" title="${Utils.formatNumber(item.total)} مهام">${Icons.svg('tasks', 13)}<b>${Utils.formatNumber(item.total)}</b><small>مهام</small></span>
+                <span class="group-stat" title="${Utils.formatNumber(open)} مفتوحة">${Icons.svg('circle', 13)}<b>${Utils.formatNumber(open)}</b><small>مفتوحة</small></span>
+                <span class="group-stat ${item.overdue ? 'danger-text' : ''}" title="${Utils.formatNumber(item.overdue)} متأخرة">${Icons.svg('alert', 13)}<b>${Utils.formatNumber(item.overdue)}</b><small>متأخرة</small></span>
+                ${sizeChip}
               </div>
               <div class="group-card-actions icon-actions">
                 <button class="icon-btn sm" data-action="view-group-tasks" data-group-id="${item.group.id}" title="فتح مهام المجموعة" aria-label="فتح مهام المجموعة">${Icons.svg('tasks', 16)}</button>
@@ -1322,6 +1419,12 @@ const Views = (() => {
     const demoCount = data.tasks.filter((task) => task.isDemo).length;
     const theme = data.settings.theme || 'auto';
     const storage = Utils.humanSize(Data.storageBytes());
+    const api = storageApi();
+    const mediaReadyNow = mediaReady();
+    const mediaUsed = mediaReadyNow ? (api.snapshot()?.totals?.used || 0) : 0;
+    const mediaStorage = mediaReadyNow
+      ? `<span>${Icons.svg('hard-drive', 15)} مساحة الوسائط: <strong>${Utils.esc(api.human(mediaUsed))}</strong></span>`
+      : `<span>${Icons.svg('hard-drive', 15)} مساحة الوسائط: <strong>—</strong> <a class="text-link" href="#/repository" data-nav="repository">إدارة المستودع</a></span>`;
     const security = data.settings.security;
     const locked = Boolean(security && !Data.isUnlocked());
     const fingerprint = Data.securityFingerprint();
@@ -1330,7 +1433,7 @@ const Views = (() => {
       : 'لم تُنشأ بعد';
     return `
       ${pageHead('الإعدادات', 'هوية المسجد، الشعار، القفل، المستودع، الأتمتة، الاختصارات، المظهر، والنسخ الاحتياطي', '', 'النظام')}
-      <div class="settings-grid">
+      <div class="settings-grid" data-settings-grid>
         <section class="settings-card card">
           <div class="card-head">
             <div><h2>هوية المسجد</h2><p>يظهر الاسم في الواجهة والتقارير.</p></div>
@@ -1368,6 +1471,7 @@ const Views = (() => {
           </div>
           <div class="storage-summary">
             <span>${Icons.svg('database', 15)} حجم البيانات المحلية: <strong>${storage}</strong></span>
+            ${mediaStorage}
             <span class="muted">آخر نسخة احتياطية: ${Utils.esc(lastBackup)}</span>
           </div>
         </section>
@@ -1459,7 +1563,7 @@ const Views = (() => {
         <section class="settings-card card">
           <div class="card-head">
             <div><h2>البيانات والنسخ الاحتياطي</h2><p>صدّر نسخة كاملة أو استوردها على جهاز آخر.</p></div>
-            <span class="settings-icon">${Icons.svg('archive', 19)}</span>
+            <span class="settings-icon">${Icons.svg('download', 19)}</span>
           </div>
           <div class="data-actions">
             <button class="data-action" data-action="export-json">
@@ -1495,6 +1599,121 @@ const Views = (() => {
     `;
   }
 
+  // ===== Settings masonry: column stacks, tops aligned, no row holes =====
+  // `.settings-grid` stays a block wrapper (no-JS fallback = stacked cards with 13px gaps).
+  // JS moves the very same card nodes (never clones, so inputs keep their state) into
+  // `.settings-column` stacks inside one `.settings-cols` row.
+  const SETTINGS_GAP = 13;
+  let settingsFrame = 0;
+  let settingsResizeTimer = 0;
+  let settingsResizeBound = false;
+
+  function settingsColumnCount(width) {
+    if (width >= 1360) return 3;
+    if (width >= 901) return 2;
+    return 1;
+  }
+
+  function settingsLayoutWidth(grid) {
+    const viewport = Number(window.innerWidth) || 0;
+    const measured = Math.round(grid?.getBoundingClientRect?.().width || 0);
+    // الشريط الجانبي (272px) وهوامش .content تضيّق الشبكة عن عرض النافذة، لذا تُقرأ عتبات
+    // التصميم على الأوسع من الاثنين: 3 أعمدة عند 1440، عمودان عند 1100، عمود عند 390.
+    return Math.max(viewport, measured);
+  }
+
+  function settingsCards(grid) {
+    const stored = grid.__settingsCards;
+    const present = grid.querySelectorAll('.settings-card').length;
+    // تُحفظ مراجع البطاقات مرة واحدة (بترتيبها الأصلي) حتى لا يفقد إعادة التوزيع الترتيب،
+    // مع إعادة الالتقاط إن أضاف أحدهم بطاقة أو أزالها.
+    if (Array.isArray(stored) && stored.length === present && stored.every((card) => card.isConnected)) return stored;
+    grid.__settingsCards = Array.from(grid.querySelectorAll('.settings-card'));
+    return grid.__settingsCards;
+  }
+
+  function distributeSettings(grid, count) {
+    const cards = settingsCards(grid);
+    let row = grid.querySelector(':scope > .settings-cols');
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'settings-cols';
+      grid.appendChild(row);
+    }
+    // إعادة بناء كاملة في كل مرة: عمود واحد فقط، والبطاقات نفسها تُنقل (بلا استنساخ).
+    row.replaceChildren();
+    const columns = [];
+    for (let index = 0; index < count; index += 1) {
+      const column = document.createElement('div');
+      column.className = 'settings-column';
+      columns.push(column);
+      row.appendChild(column);
+    }
+    const heights = columns.map(() => 0);
+    let measure = true;
+    cards.forEach((card, index) => {
+      let target = index % columns.length;
+      if (measure) {
+        target = 0;
+        for (let column = 1; column < columns.length; column += 1) {
+          if (heights[column] < heights[target]) target = column;
+        }
+      }
+      columns[target].appendChild(card);
+      const height = Math.round(card.getBoundingClientRect?.().height || card.offsetHeight || 0);
+      if (!height) measure = false; // بلا تخطيط (اختبارات DOM): توزيع بالدور
+      heights[target] += height + (heights[target] ? SETTINGS_GAP : 0);
+    });
+    return columns;
+  }
+
+  function layoutSettingsSync(grid) {
+    if (!grid || !grid.isConnected) return 0;
+    const count = settingsColumnCount(settingsLayoutWidth(grid));
+    grid.style.visibility = 'hidden';
+    try {
+      distributeSettings(grid, count);
+      grid.dataset.settingsColumns = String(count);
+    } finally {
+      grid.style.visibility = '';
+    }
+    return count;
+  }
+
+  function bindSettingsResize() {
+    if (settingsResizeBound || typeof window === 'undefined') return;
+    settingsResizeBound = true;
+    window.addEventListener('resize', () => {
+      const grid = document.querySelector('[data-settings-grid]');
+      if (!grid || !grid.isConnected) return;
+      const active = document.activeElement;
+      const editing = active && active !== document.body && grid.contains(active)
+        && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName);
+      if (editing) return; // لا نقطع الكتابة داخل حقول الإعدادات
+      clearTimeout(settingsResizeTimer);
+      settingsResizeTimer = setTimeout(() => {
+        const current = document.querySelector('[data-settings-grid]');
+        if (current) layoutSettingsSync(current);
+      }, 120);
+    }, { passive: true });
+  }
+
+  function layoutSettings(root) {
+    const host = root || (typeof document !== 'undefined' ? document : null);
+    const grid = host?.querySelector?.('[data-settings-grid]');
+    if (!grid || !grid.isConnected) return 0;
+    bindSettingsResize();
+    if (settingsFrame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(settingsFrame);
+    const run = () => {
+      settingsFrame = 0;
+      const current = host.querySelector?.('[data-settings-grid]') || document.querySelector('[data-settings-grid]');
+      if (current) layoutSettingsSync(current);
+    };
+    if (typeof requestAnimationFrame === 'function') settingsFrame = requestAnimationFrame(run);
+    else run();
+    return 1;
+  }
+
   function automation(data, state) {
     const ui = window.AutomationUI || (typeof AutomationUI !== 'undefined' ? AutomationUI : null);
     if (!ui || typeof ui.page !== 'function') {
@@ -1514,6 +1733,12 @@ const Views = (() => {
 
   function render(route, data, state) {
     const routes = { dashboard, tasks, groups, templates, team, reports, automation, settings };
+    if (route === 'repository') {
+      const page = window.RepoView && typeof window.RepoView.page === 'function'
+        ? window.RepoView.page(data, state)
+        : `<div class="empty-state"><h3>المستودع</h3><p>تعذر تحميل صفحة المستودع.</p></div>`;
+      return layout(route, `<div class="${state.animatePage ? 'page-enter' : ''}">${page}</div>`, data, state);
+    }
     const page = routes[route] ? routes[route](data, state) : dashboard(data, state);
     return layout(route, `<div class="${state.animatePage ? 'page-enter' : ''}">${page}</div>`, data, state);
   }
@@ -1522,6 +1747,7 @@ const Views = (() => {
     meta,
     pageMeta,
     render,
+    layoutSettings,
     avatar,
     groupChip,
     statusChip,
@@ -1543,4 +1769,10 @@ const Views = (() => {
     statusColors
   };
 })();
+
+// app.js calls window.Views?.layoutSettings(root) after rendering the settings route,
+// so the module must also live on window (top-level const alone is not a window property).
+try {
+  if (typeof window !== 'undefined') window.Views = Views;
+} catch (error) {}
 

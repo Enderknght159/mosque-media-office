@@ -672,7 +672,6 @@ const AutomationUI = (() => {
         <div class="automation-run-actions icon-actions">
           ${iconAction('activity', 'open-job', 'تفاصيل التشغيل', `data-job-id="${Utils.esc(job.id)}"`)}
           ${iconAction('terminal', 'open-job-log', 'سجل التشغيل', `data-job-id="${Utils.esc(job.id)}"`)}
-          ${iconAction('folder-open', 'open-job-output', 'فتح مجلد المخرجات', `data-task-id="${Utils.esc(job.taskId)}"`)}
           ${iconAction('stop', 'cancel-automation', 'إلغاء التشغيل', `data-job-id="${Utils.esc(job.id)}"`, 'is-danger')}
         </div>
       </article>`;
@@ -1281,7 +1280,6 @@ const AutomationUI = (() => {
       ${active
         ? `<button class="icon-btn is-danger" type="button" data-action="cancel-automation" data-job-id="${jobId}" title="إيقاف التشغيل" aria-label="إيقاف التشغيل">${Icons.svg('stop', 17)}</button>`
         : `<button class="icon-btn" type="button" data-action="job-restart" data-job-id="${jobId}" title="إعادة التشغيل" aria-label="إعادة التشغيل">${Icons.svg('power', 17)}</button>`}
-      <button class="icon-btn" type="button" data-action="open-job-output" data-task-id="${taskId}" title="مجلد المخرجات" aria-label="مجلد المخرجات">${Icons.svg('folder-open', 17)}</button>
       <button class="icon-btn" type="button" data-action="open-job-opencode" data-task-id="${taskId}" title="مجلد opencode" aria-label="مجلد opencode">${Icons.svg('terminal', 17)}</button>
       ${hasSession ? `<button class="icon-btn" type="button" data-action="job-copy-session" data-job-id="${jobId}" title="نسخ معرف الجلسة" aria-label="نسخ معرف الجلسة">${Icons.svg('copy', 17)}</button>` : ''}
       <span class="automation-footer-spacer"></span>
@@ -1573,7 +1571,6 @@ const AutomationUI = (() => {
       <div class="modal-footer-row">
         <div class="footer-left">
           <button class="btn ghost sm" data-action="open-job" data-job-id="${Utils.esc(job.id)}">${Icons.svg('info', 15)} تفاصيل التشغيل</button>
-          <button class="btn ghost sm" data-action="open-job-output" data-task-id="${Utils.esc(job.taskId)}">${Icons.svg('folder-open', 15)} مجلد المخرجات</button>
         </div>
         <div class="footer-right">
           ${isActive ? `<button class="btn ghost sm danger-text" data-action="cancel-automation" data-job-id="${Utils.esc(job.id)}">${Icons.svg('stop', 15)} إلغاء</button>` : ''}

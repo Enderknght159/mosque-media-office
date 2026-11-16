@@ -502,17 +502,6 @@
 /* ===== Task folder + automation affordances (additive) ===== */
 .task-folder-btn { position: relative; }
 .task-folder-btn.has-folder { color: var(--accent); }
-.task-folder-btn.has-folder::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  inset-inline-end: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 1.5px var(--surface-solid);
-}
 .task-auto-btn { color: var(--purple); }
 .task-auto-btn:hover { background: color-mix(in srgb, var(--purple) 12%, transparent); color: var(--purple); }
 
@@ -743,3 +732,118 @@
   border-radius: 10px;
 }
 .icon-btn.topbar-add:hover { background: var(--accent-hover); color: #fff; }
+
+/* ===== Storage: folder location menu + size chips ===== */
+.location-menu {
+  position: fixed;
+  z-index: 80;
+  width: min(340px, calc(100vw - 16px));
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.location-menu button {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  text-align: start;
+  cursor: pointer;
+}
+.location-menu button:hover { background: var(--surface-2); }
+.location-menu-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--accent);
+  margin-top: 1px;
+}
+.location-menu-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.location-menu-text strong { font-size: 10.5px; font-weight: 650; }
+.location-menu-text small {
+  font-size: 8px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 270px;
+}
+.location-menu-sections { font-size: 7.5px; color: var(--text-3); }
+
+.storage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.storage-chip .icon { flex: 0 0 auto; }
+
+@media (max-width: 560px) {
+  .storage-chip.compact { display: none; }
+}
+
+/* ===== Dashboard: quiet media-storage line under the four stat cards ===== */
+.dash-storage {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 13px;
+  margin: -11px 0 24px;
+  border-radius: 14px;
+}
+.dash-storage-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dash-storage-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.dash-storage-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.dash-storage-label { font-size: 10.5px; font-weight: 650; }
+.dash-storage-note,
+.dash-storage-sections { font-size: 8.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-storage-value { font-size: 19px; font-weight: 700; line-height: 1.15; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dash-storage-link { flex: 0 0 auto; font-size: 9px; display: inline-flex; align-items: center; gap: 2px; }
+.dash-storage-bar { display: block; height: 3px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.dash-storage-bar i { display: block; height: 100%; border-radius: 2px; background: var(--accent); opacity: 0.5; }
+
+@media (max-width: 720px) {
+  .dash-storage-row { flex-wrap: wrap; }
+  .dash-storage-value { margin-inline-start: auto; }
+  .dash-storage-link { width: 100%; }
+  .dash-storage-sections { white-space: normal; }
+}
+
+/* ===== Tasks table: compact storage column (only when a snapshot exists) ===== */
+.task-table .col-storage { width: 1%; white-space: nowrap; text-align: end; }
+.table-storage {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.table-storage .icon { flex: 0 0 auto; }
+.task-table tbody tr:hover .table-storage { color: var(--text-2); }
+

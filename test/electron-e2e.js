@@ -101,6 +101,52 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     check('manifest indexes the task', Boolean(manifest.tasks?.[ids.taskId]?.folder));
     check('manifest indexes the group', Boolean(manifest.groups?.[ids.groupId]?.folder));
 
+    section('storage scan and verified archive');
+    fs.writeFileSync(path.join(repoDir, taskFolder, 'output', 'reel.txt'), 'reel-content');
+    fs.writeFileSync(path.join(repoDir, taskFolder, 'opencode', 'notes.txt'), 'notes-content');
+    fs.writeFileSync(path.join(repoDir, taskFolder, 'source.txt'), 'source-content');
+    const archiveDir = path.join(tempRoot, 'archive-repo');
+    fs.mkdirSync(archiveDir, { recursive: true });
+    const registered = await page.evaluate(async (dir) => window.MMO.repo.register({ path: dir, role: 'archive', label: 'أرشيف الاختبار' }), archiveDir);
+    check('repo:register archive ok', registered?.ok === true, JSON.stringify(registered).slice(0, 200));
+    await page.evaluate(({ dir, repoId }) => {
+      Data.addArchive({ repoId, path: dir, label: 'أرشيف الاختبار' });
+    }, { dir: archiveDir, repoId: registered?.data?.manifest?.repoId || '' });
+
+    const scanned = await page.evaluate(async () => window.Storage.scan({ force: true, silent: true, refresh: false }));
+    check('storage scan ok', scanned?.ok === true, JSON.stringify(scanned).slice(0, 200));
+    const taskBytes = await page.evaluate((taskId) => Data.findTask(taskId)?.storage?.total || 0, ids.taskId);
+    check('task size recorded', taskBytes > 0, String(taskBytes));
+
+    const archived = await page.evaluate(async (taskId) => window.Storage.archiveSection(taskId, 'output', { confirm: false, silent: true }), ids.taskId);
+    check('archive section ok', archived?.ok === true, JSON.stringify(archived).slice(0, 300));
+    check('archive removed the source output', !fs.existsSync(path.join(repoDir, taskFolder, 'output', 'reel.txt')));
+    const archivedReel = path.join(archiveDir, taskFolder, 'output', 'reel.txt');
+    check('archive wrote the verified file', fs.existsSync(archivedReel));
+    check('archive content intact', fs.existsSync(archivedReel) && fs.readFileSync(archivedReel, 'utf8') === 'reel-content');
+    check('archive receipt written', fs.existsSync(path.join(archiveDir, '.mmo-archive', 'index', `${ids.taskId}.json`)));
+    check('task marked archived', await page.evaluate((taskId) => Boolean(Data.findTask(taskId)?.archived?.output), ids.taskId));
+
+    const restored = await page.evaluate(async (taskId) => window.Storage.restoreSection(taskId, 'output', { confirm: false, silent: true }), ids.taskId);
+    check('restore section ok', restored?.ok === true, JSON.stringify(restored).slice(0, 300));
+    check('restore brought the file back', fs.existsSync(path.join(repoDir, taskFolder, 'output', 'reel.txt')));
+    check('task no longer archived', await page.evaluate((taskId) => !Data.findTask(taskId)?.archived?.output, ids.taskId));
+
+    section('trash restore');
+    await page.evaluate(async () => window.Storage.scan({ force: true, silent: true, refresh: false }));
+    const trashed = await page.evaluate(async (taskId) => window.Storage.trashSection(taskId, 'sources', { confirm: false, silent: true }), ids.taskId);
+    check('trash section ok', trashed?.ok === true, JSON.stringify(trashed).slice(0, 300));
+    check('trash removed the source file', !fs.existsSync(path.join(repoDir, taskFolder, 'source.txt')));
+    check('trash folder exists', fs.existsSync(path.join(repoDir, '.trash')));
+    const trashList = await page.evaluate(async () => window.Storage.trashList());
+    const entry = Array.isArray(trashList) ? trashList.find((item) => item.meta?.taskId === ids.taskId) : null;
+    check('trash list contains the entry', Boolean(entry), String(trashList?.length));
+    if (entry) {
+      const restoredTrash = await page.evaluate(async (item) => window.Storage.trashRestore(item), entry);
+      check('trash restore ok', restoredTrash?.ok === true, JSON.stringify(restoredTrash).slice(0, 200));
+      check('trash restore brought the file back', fs.existsSync(path.join(repoDir, taskFolder, 'source.txt')));
+    }
+
     section('opencode health and models');
     const health = await page.evaluate(async () => window.Opencode.health({ silent: true }));
     check('opencode available', health?.available === true, JSON.stringify(health).slice(0, 200));

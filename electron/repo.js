@@ -225,6 +225,7 @@ function createManifest() {
     schema: 1,
     kind: MANIFEST_KIND,
     repoId: `rpo_${crypto.randomBytes(8).toString('hex')}`,
+    role: 'primary',
     name: 'المكتب الإعلامي',
     app: { name: 'mosque-media-office', version: appVersion() },
     machine: { host: os.hostname(), platform: process.platform },
@@ -247,6 +248,7 @@ function normalizeManifest(raw) {
     schema: Number(raw.schema) || 1,
     kind: MANIFEST_KIND,
     repoId: typeof raw.repoId === 'string' && raw.repoId.trim() ? raw.repoId.trim() : fallback.repoId,
+    role: raw.role === 'archive' ? 'archive' : 'primary',
     name: typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : fallback.name,
     app: raw.app && typeof raw.app === 'object'
       ? { name: String(raw.app.name || 'mosque-media-office'), version: String(raw.app.version || '') }
@@ -609,6 +611,24 @@ async function handleLink(payload = {}) {
   return { ok: true, data: { path: repoRoot, manifest, created } };
 }
 
+/** يربط مجلدًا كمستودع (أرشيفي عادة) دون تغيير المستودع النشط. */
+async function handleRegister(payload = {}) {
+  const repoRoot = assertRepoDir(payload.path);
+  const existing = loadManifest(repoRoot, { strict: true });
+  let manifest = existing;
+  let created = false;
+  if (!manifest) {
+    manifest = createManifest();
+    created = true;
+  }
+  if (payload.role === 'archive') manifest.role = 'archive';
+  const label = String(payload.label || '').trim();
+  if (label) manifest.name = label.slice(0, 80);
+  manifest.updatedAt = new Date().toISOString();
+  writeJsonAtomic(manifestPath(repoRoot), manifest);
+  return { ok: true, data: { path: repoRoot, manifest, created } };
+}
+
 async function handleSyncCall(payload = {}) {
   return syncRepo(payload);
 }
@@ -698,6 +718,7 @@ function register(ipcMain, guard) {
   ipcMain.handle('repo:pick', guard(handlePick));
   ipcMain.handle('repo:detect', guard(handleDetect));
   ipcMain.handle('repo:link', guard(handleLink));
+  ipcMain.handle('repo:register', guard(handleRegister));
   ipcMain.handle('repo:sync', guard(handleSyncCall));
   ipcMain.handle('repo:open', guard(handleOpen));
   ipcMain.handle('repo:reveal', guard(handleReveal));
@@ -713,5 +734,23 @@ module.exports = {
   MANIFEST_NAME,
   MIRROR_NAME,
   OUTPUT_DIR,
-  STATUS_DIR
+  STATUS_DIR,
+  LOGS_DIR,
+  NO_GROUP_FOLDER,
+  // Shared helpers for the storage/archive engine.
+  getActiveRepoPath,
+  setActiveRepoPath,
+  loadManifest,
+  createManifest,
+  normalizeManifest,
+  writeJsonAtomic,
+  writeFileAtomic,
+  resolveInside,
+  assertRepoDir,
+  safeRelPath,
+  safeFolderName,
+  taskDateKey,
+  relKey,
+  joinRel,
+  isDir
 };

@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('MMO', {
     pick: () => call('repo:pick'),
     detect: (path) => call('repo:detect', { path }),
     link: (path) => call('repo:link', { path }),
+    register: (payload) => call('repo:register', payload),
     sync: (payload) => call('repo:sync', payload),
     open: (payload) => call('repo:open', payload),
     reveal: (payload) => call('repo:reveal', payload),
@@ -34,9 +35,36 @@ contextBridge.exposeInMainWorld('MMO', {
     forget: () => call('repo:forget')
   },
 
+  storage: {
+    scan: (payload) => call('storage:scan', payload),
+    locate: (payload) => call('storage:locate', payload),
+    volume: (payload) => call('storage:volume', payload),
+    onProgress: (callback) => subscribe('mmo:storage:progress', callback)
+  },
+
+  archive: {
+    start: (payload) => call('archive:start', payload),
+    cancel: (payload) => call('archive:cancel', payload),
+    restore: (payload) => call('archive:restore', payload),
+    reconcile: (payload) => call('archive:reconcile', payload),
+    purgeExpired: (payload) => call('archive:purgeExpired', payload),
+    onProgress: (callback) => subscribe('mmo:archive:progress', callback),
+    onDone: (callback) => subscribe('mmo:archive:done', callback)
+  },
+
+  trash: {
+    move: (payload) => call('trash:move', payload),
+    list: (payload) => call('trash:list', payload),
+    restore: (payload) => call('trash:restore', payload),
+    delete: (payload) => call('trash:delete', payload),
+    purge: (payload) => call('trash:purge', payload),
+    onChange: (callback) => subscribe('mmo:trash:changed', callback)
+  },
+
   store: {
     readMirror: () => call('store:readMirror'),
-    writeMirror: (snapshot) => call('store:writeMirror', { snapshot })
+    writeMirror: (snapshot) => call('store:writeMirror', { snapshot }),
+    backup: (payload) => call('store:backup', payload)
   },
 
   opencode: {

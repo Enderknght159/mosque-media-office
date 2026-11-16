@@ -160,11 +160,12 @@ async function waitForServer() {
 
     const settingsMetrics = await page.evaluate(() => {
       const grid = document.querySelector('.settings-grid');
-      const cards = [...document.querySelectorAll('.settings-grid > .settings-card')];
+      const columns = [...document.querySelectorAll('.settings-grid .settings-column')];
+      const cards = [...document.querySelectorAll('.settings-grid .settings-card')];
       return {
         grid: grid ? Math.round(grid.getBoundingClientRect().width) : 0,
         cards: cards.map((card) => Math.round(card.getBoundingClientRect().width)),
-        columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0
+        columns: columns.length || (grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length : 0)
       };
     });
     if (settingsMetrics.columns < 3) errors.push(`settings grid has ${settingsMetrics.columns} columns at 1440px`);
@@ -182,6 +183,12 @@ async function waitForServer() {
     const folder = await page.locator('[data-action="open-task-folder"]').count();
     if (robot === 0) errors.push('task cards lack the robot button');
     if (folder === 0) errors.push('task cards lack the folder button');
+    const folderDot = await page.evaluate(() => {
+      const button = document.querySelector('.task-folder-btn.has-folder');
+      if (!button) return 'none';
+      return getComputedStyle(button, '::after').content;
+    });
+    if (folderDot && folderDot !== 'none' && folderDot !== 'normal') errors.push(`folder button still has a decorative dot: ${folderDot}`);
 
     await page.locator('[data-action="start-automation"]').nth(1).click();
     await page.waitForTimeout(1500);

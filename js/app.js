@@ -243,8 +243,17 @@ const App = (() => {
     const meta = Views.pageMeta(state.route);
     appRoot.innerHTML = Views.render(state.route, data, state);
     try {
-      if (state.route === 'settings') window.SettingsSections?.bind?.(appRoot);
+      if (state.route === 'settings') {
+        window.SettingsSections?.bind?.(appRoot);
+        window.Views?.layoutSettings?.(appRoot);
+      }
       window.AutomationUI?.bind?.(appRoot);
+      if (state.route === 'repository') {
+        window.RepoView?.bind?.(appRoot);
+        const scanned = window.Storage?.scannedAt?.();
+        const stale = !scanned || (Date.now() - new Date(scanned).getTime() > 60 * 1000);
+        if (stale) window.Storage?.scan?.({ silent: true, refresh: false });
+      }
     } catch (error) {}
     document.body.classList.remove('onboarding-active');
     document.title = `${meta.label} · ${data.settings.mosqueName}`;
@@ -662,6 +671,14 @@ const App = (() => {
   async function deleteTaskFlow(taskId, source) {
     const task = Data.findTask(taskId);
     if (!task) return;
+    if (window.Storage?.trashTask && window.Repo?.status?.().linked) {
+      const result = await window.Storage.trashTask(taskId);
+      if (result?.ok) {
+        closeAllModals();
+        refresh();
+      }
+      return;
+    }
     const ok = await confirm({
       title: 'حذف المهمة',
       message: `سيتم حذف «${task.title}» نهائيًا مع سجل مراحلها وإنجازاتها.`,
@@ -678,6 +695,15 @@ const App = (() => {
   async function deleteGroupFlow(groupId) {
     const group = Data.findGroup(groupId);
     if (!group) return;
+    if (window.Storage?.trashGroup && window.Repo?.status?.().linked) {
+      const result = await window.Storage.trashGroup(groupId);
+      if (result?.ok) {
+        if (state.tasks.groupId === groupId) state.tasks.groupId = 'all';
+        if (state.report.groupId === groupId) state.report.groupId = 'all';
+        refresh();
+      }
+      return;
+    }
     const summary = Data.groupSummary(groupId);
     const ok = await confirm({
       title: 'حذف المجموعة',
@@ -693,6 +719,15 @@ const App = (() => {
     if (state.report.groupId === groupId) state.report.groupId = 'all';
     refresh();
     toast(result.tasksDeleted ? `تم حذف المجموعة و${result.tasksDeleted} مهمة.` : 'تم حذف المجموعة.', { type: 'success' });
+  }
+
+  async function refreshSectionThen(run, taskId) {
+    const result = await run();
+    if (!result?.ok) return;
+    if (document.querySelector('.task-detail-modal')) {
+      closeAllModals();
+      Modals.openTaskDetail(taskId);
+    }
   }
 
   async function deleteTemplateFlow(templateId) {
@@ -876,13 +911,37 @@ const App = (() => {
         Modals.openStageCell(element.dataset.taskId, element.dataset.stageId);
         break;
       case 'open-task-folder':
-        window.Repo?.openTask?.(element.dataset.taskId);
+        if (window.Storage?.openFolder) window.Storage.openFolder({ taskId: element.dataset.taskId }, element);
+        else window.Repo?.openTask?.(element.dataset.taskId);
         break;
       case 'open-task-output':
         window.Repo?.openTaskOutput?.(element.dataset.taskId);
         break;
       case 'open-group-folder':
-        window.Repo?.openGroup?.(element.dataset.groupId);
+        if (window.Storage?.openFolder) window.Storage.openFolder({ groupId: element.dataset.groupId }, element);
+        else window.Repo?.openGroup?.(element.dataset.groupId);
+        break;
+      case 'archive-section':
+        refreshSectionThen(() => window.Storage?.archiveSection?.(element.dataset.taskId, element.dataset.section), element.dataset.taskId);
+        break;
+      case 'restore-section':
+        refreshSectionThen(() => window.Storage?.restoreSection?.(element.dataset.taskId, element.dataset.section), element.dataset.taskId);
+        break;
+      case 'trash-section':
+        refreshSectionThen(() => window.Storage?.trashSection?.(element.dataset.taskId, element.dataset.section), element.dataset.taskId);
+        break;
+      case 'archive-task':
+        refreshSectionThen(() => window.Storage?.archiveTask?.(element.dataset.taskId), element.dataset.taskId);
+        break;
+      case 'archive-group':
+        window.Storage?.archiveGroup?.(element.dataset.groupId);
+        break;
+      case 'scan-storage':
+        if (element.dataset.taskId) {
+          refreshSectionThen(() => window.Storage?.scan?.({ force: true, silent: false }), element.dataset.taskId);
+        } else {
+          window.Storage?.scan?.({ force: true, silent: false });
+        }
         break;
       case 'sync-repo-folders':
         window.Repo?.sync?.({ silent: false });
@@ -1289,8 +1348,13 @@ const App = (() => {
     } catch (error) {}
     if (window.Repo?.status?.().linked) {
       window.Repo.sync({ silent: true })
-        .then(() => { if (data) refresh(); })
-        .catch(() => {});
+        .then(() => {})
+        .catch(() => {})
+        .finally(() => {
+          if (!data) return;
+          window.Storage?.scan?.({ silent: true, refresh: false });
+          refresh();
+        });
     }
   }
 
@@ -1299,6 +1363,19 @@ const App = (() => {
     const storedMode = localStorage.getItem('mmo_theme') || 'auto';
     applyTheme(storedMode);
     data = Data.load();
+    const preMigration = Data.takeMigrationBackup?.() || null;
+    if (preMigration) {
+      Data.save();
+      try {
+        window.MMO?.store?.backup?.({ snapshot: preMigration, label: 'pre-v3' })
+          .then((result) => {
+            if (result?.ok && result.data?.path) {
+              toast('حُدّثت البيانات مع نسخة احتياطية قبل الترقية.', { type: 'success', icon: 'hard-drive' });
+            }
+          })
+          .catch(() => {});
+      } catch (error) {}
+    }
     if (!data && window.MMO?.store) {
       const restored = await Data.restoreFromMirror();
       if (restored) {

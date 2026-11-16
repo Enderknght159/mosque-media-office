@@ -35,6 +35,18 @@ if (process.env.MMO_USER_DATA) {
 let mainWindow = null;
 const repo = require('./repo');
 const opencode = require('./opencode');
+let storageEngine = null;
+let archiveEngine = null;
+try {
+  storageEngine = require('./storage');
+} catch (error) {
+  console.warn('storage engine unavailable:', error.message);
+}
+try {
+  archiveEngine = require('./archive');
+} catch (error) {
+  console.warn('archive engine unavailable:', error.message);
+}
 
 function stateFile() {
   return path.join(app.getPath('userData'), 'window-state.json');
@@ -242,6 +254,22 @@ function registerIpc() {
 
   repo.register(ipcMain, guard);
   opencode.register(ipcMain, guard, { getWindow });
+  if (storageEngine && typeof storageEngine.register === 'function') storageEngine.register(ipcMain, guard);
+  if (archiveEngine && typeof archiveEngine.register === 'function') archiveEngine.register(ipcMain, guard, { getWindow });
+
+  ipcMain.handle('store:backup', guard(async (payload = {}) => {
+    const snapshot = typeof payload.snapshot === 'string' ? payload.snapshot : '';
+    if (!snapshot || Buffer.byteLength(snapshot, 'utf8') > 60 * 1024 * 1024) {
+      throw new Error('لقطة النسخة الاحتياطية غير صالحة.');
+    }
+    const folder = path.join(app.getPath('userData'), 'backups');
+    fs.mkdirSync(folder, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const label = String(payload.label || 'backup').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || 'backup';
+    const target = path.join(folder, `${label}-${stamp}.json`);
+    fs.writeFileSync(target, snapshot, 'utf8');
+    return { ok: true, data: { path: target } };
+  }));
 }
 
 if (!app.requestSingleInstanceLock()) {

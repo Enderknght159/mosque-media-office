@@ -74,7 +74,10 @@ const v1 = {
   activeUserId: 'usr_a'
 };
 const upgraded = Data.normalize(v1);
-check('version becomes 2', upgraded.version === 2, String(upgraded.version));
+check('version becomes the current schema', upgraded.version === Data.VERSION, String(upgraded.version));
+check('archives array exists', Array.isArray(upgraded.settings.archives));
+check('storage snapshot starts empty', upgraded.settings.storage === null);
+check('task archived map starts empty', upgraded.tasks[0] && typeof upgraded.tasks[0].archived === 'object');
 check('prompts array exists', Array.isArray(upgraded.prompts));
 check('automations array exists', Array.isArray(upgraded.automations));
 check('repo defaults to null', upgraded.settings.repo === null);

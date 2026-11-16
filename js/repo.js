@@ -247,6 +247,9 @@ const Repo = (() => {
       detection.data && detection.data.isRepo ? 'تم ربط مستودع موجود ومزامنة مجلداته.' : 'تم إنشاء مستودع جديد ومزامنة مجلداته.',
       { type: 'success', icon: 'folder' }
     );
+    try {
+      window.Storage?.scan?.({ silent: true, refresh: false });
+    } catch (error) {}
     refreshUI();
     return { ok: true, path: linkedData.path || target };
   }

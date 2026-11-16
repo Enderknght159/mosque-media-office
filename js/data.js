@@ -1,6 +1,8 @@
 const Data = (() => {
   const STORAGE_KEY = 'mosque_media_office_v1';
-  const VERSION = 2;
+  const VERSION = 3;
+  const SECTIONS = ['sources', 'output', 'opencode'];
+  const SECTION_LABELS = { sources: 'المصادر', output: 'المخرجات', opencode: 'opencode' };
 
   const PALETTE = [
     { name: 'أزرق', value: '#0a84ff' },
@@ -41,6 +43,148 @@ const Data = (() => {
 
   let current = null;
   let unlocked = false;
+  let pendingMigration = null;
+
+  function bytesOf(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) return 0;
+    return Math.round(number);
+  }
+
+  function normalizeVolume(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    return {
+      label: String(raw.label || '').trim().slice(0, 120),
+      serial: String(raw.serial || '').trim().slice(0, 120),
+      fs: String(raw.fs || '').trim().slice(0, 40),
+      total: bytesOf(raw.total),
+      free: bytesOf(raw.free),
+      at: raw.at || null
+    };
+  }
+
+  function normalizeSections(raw) {
+    const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    const sections = {
+      sources: bytesOf(source.sources),
+      output: bytesOf(source.output),
+      opencode: bytesOf(source.opencode),
+      other: bytesOf(source.other),
+      trash: bytesOf(source.trash),
+      total: bytesOf(source.total)
+    };
+    if (!sections.total) sections.total = sections.sources + sections.output + sections.opencode;
+    return sections;
+  }
+
+  function normalizeRepoEntry(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const path = String(raw.path || '').trim();
+    if (!path) return null;
+    const repoId = String(raw.repoId || '').trim();
+    return {
+      id: /^arc_[A-Za-z0-9_-]{1,60}$/.test(String(raw.id || '')) ? String(raw.id) : `arc_${Utils.uid('x').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 20)}`,
+      repoId,
+      path,
+      label: String(raw.label || '').trim().slice(0, 80) || 'مستودع خارجي',
+      volume: normalizeVolume(raw.volume),
+      linkedAt: raw.linkedAt || nowISO(),
+      lastSeenAt: raw.lastSeenAt || null,
+      lastScanAt: raw.lastScanAt || null,
+      status: raw.status === 'offline' ? 'offline' : 'online'
+    };
+  }
+
+  function normalizeArchives(raw) {
+    if (!Array.isArray(raw)) return [];
+    const seen = new Set();
+    return raw.map(normalizeRepoEntry).filter((entry) => {
+      if (!entry || seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    }).slice(0, 20);
+  }
+
+  function normalizeArchived(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    const archived = {};
+    SECTIONS.forEach((section) => {
+      const item = raw[section];
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+      const repoId = String(item.repoId || '').trim();
+      const rel = String(item.rel || '').trim();
+      if (!repoId || !rel) return;
+      archived[section] = {
+        repoId,
+        archiveId: String(item.archiveId || '').trim(),
+        rel: rel.slice(0, 1000),
+        at: item.at || null,
+        bytes: bytesOf(item.bytes),
+        files: bytesOf(item.files),
+        receipt: String(item.receipt || '').trim().slice(0, 500)
+      };
+    });
+    return archived;
+  }
+
+  function normalizeTaskStorage(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const sections = normalizeSections(raw);
+    return {
+      sources: sections.sources,
+      output: sections.output,
+      opencode: sections.opencode,
+      total: bytesOf(raw.total) || sections.total,
+      files: bytesOf(raw.files),
+      at: raw.at || null,
+      exists: raw.exists !== false
+    };
+  }
+
+  function normalizeStorage(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const repos = {};
+    const rawRepos = raw.repos && typeof raw.repos === 'object' && !Array.isArray(raw.repos) ? raw.repos : {};
+    Object.keys(rawRepos).slice(0, 30).forEach((key) => {
+      const item = rawRepos[key];
+      if (!item || typeof item !== 'object') return;
+      repos[key] = {
+        used: bytesOf(item.used),
+        free: bytesOf(item.free),
+        capacity: bytesOf(item.capacity),
+        sections: normalizeSections(item.sections),
+        online: item.online !== false,
+        scannedAt: item.scannedAt || null
+      };
+    });
+    const totals = raw.totals && typeof raw.totals === 'object' ? raw.totals : {};
+    return {
+      scannedAt: raw.scannedAt || null,
+      totals: {
+        used: bytesOf(totals.used),
+        free: bytesOf(totals.free),
+        capacity: bytesOf(totals.capacity)
+      },
+      sections: normalizeSections(raw.sections),
+      repos
+    };
+  }
+
+  function normalizeStorageLog(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.slice(-50).map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      return {
+        at: entry.at || nowISO(),
+        type: String(entry.type || '').slice(0, 40),
+        taskId: entry.taskId ? String(entry.taskId).slice(0, 90) : '',
+        section: SECTIONS.includes(entry.section) ? entry.section : '',
+        bytes: bytesOf(entry.bytes),
+        ok: entry.ok !== false,
+        message: String(entry.message || '').slice(0, 300)
+      };
+    }).filter(Boolean);
+  }
 
   function nowISO() {
     return new Date().toISOString();
@@ -80,7 +224,10 @@ const Data = (() => {
       repoId: String(rawRepo.repoId || '').trim(),
       autoRename: rawRepo.autoRename !== false,
       linkedAt: rawRepo.linkedAt || now,
-      lastSyncAt: rawRepo.lastSyncAt || null
+      lastSyncAt: rawRepo.lastSyncAt || null,
+      label: String(rawRepo.label || '').trim().slice(0, 80) || 'المستودع الأساسي',
+      volume: normalizeVolume(rawRepo.volume),
+      lastScanAt: rawRepo.lastScanAt || null
     } : null;
     const rawAi = rawSettings.ai && typeof rawSettings.ai === 'object' ? rawSettings.ai : {};
     const rawFilter = rawAi.filter && typeof rawAi.filter === 'object' ? rawAi.filter : {};
@@ -119,6 +266,9 @@ const Data = (() => {
       lastBackupAt: rawSettings.lastBackupAt || null,
       lastBackupType: rawSettings.lastBackupType || null,
       repo,
+      archives: normalizeArchives(rawSettings.archives),
+      storage: normalizeStorage(rawSettings.storage),
+      storageLog: normalizeStorageLog(rawSettings.storageLog),
       ai
     };
 
@@ -204,6 +354,8 @@ const Data = (() => {
         priority: PRIORITIES[task.priority] ? task.priority : 'normal',
         description: String(task.description || '').trim(),
         folder: String(task.folder || '').trim(),
+        archived: normalizeArchived(task.archived),
+        storage: normalizeTaskStorage(task.storage),
         createdAt: task.createdAt || now,
         updatedAt: task.updatedAt || task.createdAt || now,
         isDemo: Boolean(task.isDemo)
@@ -276,14 +428,25 @@ const Data = (() => {
 
   function load() {
     unlocked = false;
+    pendingMigration = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      current = normalize(JSON.parse(raw));
+      const parsed = JSON.parse(raw);
+      const fromVersion = Number(parsed && parsed.version) || 0;
+      current = normalize(parsed);
+      if (fromVersion < VERSION) pendingMigration = raw;
       return current;
     } catch (error) {
       return null;
     }
+  }
+
+  /** يعيد لقطة JSON الخام قبل الترحيل (مرة واحدة) لكتابتها كنسخة احتياطية. */
+  function takeMigrationBackup() {
+    const snapshot = pendingMigration;
+    pendingMigration = null;
+    return snapshot;
   }
 
   let mirrorTimer = null;
@@ -1148,6 +1311,12 @@ const Data = (() => {
       });
     } else if (sort === 'oldest') {
       copy.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } else if (sort === 'storage-desc' || sort === 'storage-asc') {
+      const direction = sort === 'storage-asc' ? 1 : -1;
+      copy.sort((a, b) => {
+        const diff = (Number(a.storage?.total) || 0) - (Number(b.storage?.total) || 0);
+        return direction * diff || new Date(b.updatedAt) - new Date(a.updatedAt);
+      });
     } else {
       copy.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     }
@@ -1235,6 +1404,8 @@ const Data = (() => {
       overdue,
       stageTotal,
       stageDone,
+      bytes: list.reduce((sum, task) => sum + (Number(task.storage?.total) || 0), 0),
+      archived: list.filter((task) => task.archived && Object.keys(task.archived).length).length,
       pct: Utils.percent(done, list.length)
     };
   }
@@ -1664,6 +1835,7 @@ const Data = (() => {
   function unlinkRepo() {
     if (!current) return false;
     current.settings.repo = null;
+    current.settings.storage = null;
     current.groups.forEach((group) => { group.folder = ''; });
     current.tasks.forEach((task) => { task.folder = ''; });
     save();
@@ -1686,6 +1858,196 @@ const Data = (() => {
     if (target.taskId) return findTask(target.taskId)?.folder || '';
     if (target.groupId) return findGroup(target.groupId)?.folder || '';
     return '';
+  }
+
+  // ------------------------------------------------------- storage / archives
+  function setStorageSnapshot(snapshot = {}) {
+    if (!current) return null;
+    const clean = normalizeStorage(snapshot);
+    if (!clean) return current.settings.storage;
+    current.settings.storage = clean;
+    const byTask = snapshot.tasks && typeof snapshot.tasks === 'object' && !Array.isArray(snapshot.tasks)
+      ? snapshot.tasks
+      : {};
+    current.tasks.forEach((task) => {
+      const item = byTask[task.id];
+      if (!item || typeof item !== 'object') return;
+      const sections = normalizeSections(item);
+      task.storage = {
+        sources: sections.sources,
+        output: sections.output,
+        opencode: sections.opencode,
+        total: bytesOf(item.total) || sections.total,
+        files: bytesOf(item.files),
+        exists: item.exists !== false,
+        at: clean.scannedAt
+      };
+    });
+    if (current.settings.repo) {
+      current.settings.repo.lastScanAt = clean.scannedAt;
+      const primary = clean.repos.primary;
+      if (primary) {
+        current.settings.repo.volume = {
+          ...(current.settings.repo.volume || { label: '', serial: '', fs: '' }),
+          total: primary.capacity,
+          free: primary.free,
+          at: clean.scannedAt
+        };
+      }
+    }
+    current.settings.archives.forEach((archive) => {
+      const repo = clean.repos[archive.id] || clean.repos[archive.repoId];
+      if (!repo) return;
+      archive.status = repo.online ? 'online' : 'offline';
+      archive.lastScanAt = clean.scannedAt;
+      archive.lastSeenAt = repo.online ? clean.scannedAt : archive.lastSeenAt;
+      archive.volume = {
+        ...(archive.volume || { label: '', serial: '', fs: '' }),
+        total: repo.capacity,
+        free: repo.free,
+        at: clean.scannedAt
+      };
+    });
+    save();
+    return current.settings.storage;
+  }
+
+  function storageForTask(taskId) {
+    const task = findTask(taskId);
+    return task && task.storage ? task.storage : null;
+  }
+
+  function storageForGroup(groupId) {
+    const list = current ? current.tasks.filter((task) => task.groupId === groupId) : [];
+    return list.reduce((sum, task) => sum + (Number(task.storage?.total) || 0), 0);
+  }
+
+  function archivedForTask(taskId) {
+    const task = findTask(taskId);
+    return task && task.archived ? task.archived : {};
+  }
+
+  function archiveRepo(id) {
+    if (!current) return null;
+    return current.settings.archives.find((item) => item.id === id || item.repoId === id) || null;
+  }
+
+  function addArchive({ repoId = '', path = '', label = '', volume = null } = {}) {
+    if (!current) return null;
+    const cleanPath = String(path || '').trim();
+    if (!cleanPath) return null;
+    const cleanRepoId = String(repoId || '').trim();
+    const existing = current.settings.archives.find((item) => (cleanRepoId && item.repoId === cleanRepoId) || item.path === cleanPath);
+    if (existing) {
+      existing.path = cleanPath;
+      existing.repoId = cleanRepoId || existing.repoId;
+      existing.label = String(label || existing.label || '').trim() || existing.label;
+      existing.volume = normalizeVolume(volume) || existing.volume;
+      existing.status = 'online';
+      existing.lastSeenAt = nowISO();
+      save();
+      return existing;
+    }
+    const entry = normalizeRepoEntry({
+      id: `arc_${Utils.uid('x').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 20)}`,
+      repoId: cleanRepoId,
+      path: cleanPath,
+      label: label || 'مستودع خارجي',
+      volume,
+      linkedAt: nowISO(),
+      lastSeenAt: nowISO(),
+      status: 'online'
+    });
+    if (!entry) return null;
+    current.settings.archives.push(entry);
+    save();
+    return entry;
+  }
+
+  function updateArchive(id, patch = {}) {
+    if (!current) return null;
+    const entry = current.settings.archives.find((item) => item.id === id);
+    if (!entry) return null;
+    const path = patch.path != null ? String(patch.path || '').trim() : entry.path;
+    if (!path) return null;
+    Object.assign(entry, {
+      path,
+      repoId: patch.repoId != null ? String(patch.repoId || '').trim() : entry.repoId,
+      label: patch.label != null ? (String(patch.label || '').trim() || entry.label) : entry.label,
+      volume: patch.volume != null ? normalizeVolume(patch.volume) : entry.volume,
+      status: patch.status === 'offline' ? 'offline' : patch.status === 'online' ? 'online' : entry.status,
+      lastSeenAt: patch.lastSeenAt || entry.lastSeenAt
+    });
+    save();
+    return entry;
+  }
+
+  function removeArchive(id) {
+    if (!current) return false;
+    const before = current.settings.archives.length;
+    current.settings.archives = current.settings.archives.filter((item) => item.id !== id);
+    if (current.settings.archives.length === before) return false;
+    save();
+    return true;
+  }
+
+  function markArchived(taskId, section, info = {}) {
+    const task = findTask(taskId);
+    if (!task || !SECTIONS.includes(section)) return null;
+    task.archived = { ...(task.archived || {}), [section]: normalizeArchived({ [section]: info })[section] };
+    if (!task.archived[section]) delete task.archived[section];
+    task.updatedAt = nowISO();
+    save();
+    return task.archived[section] || null;
+  }
+
+  function unmarkArchived(taskId, section) {
+    const task = findTask(taskId);
+    if (!task || !task.archived || !task.archived[section]) return false;
+    delete task.archived[section];
+    task.updatedAt = nowISO();
+    save();
+    return true;
+  }
+
+  function logStorage(entry = {}) {
+    if (!current) return;
+    current.settings.storageLog = normalizeStorageLog([
+      ...(current.settings.storageLog || []),
+      { ...entry, at: entry.at || nowISO() }
+    ]);
+    save();
+  }
+
+  function restoreTaskRecord(record) {
+    if (!current || !record || typeof record !== 'object' || !record.title) return null;
+    const existing = findTask(record.id);
+    if (existing) return existing;
+    current = normalize({
+      ...current,
+      version: VERSION,
+      tasks: [...current.tasks, record]
+    });
+    save();
+    return findTask(record.id);
+  }
+
+  function restoreGroupRecord(record) {
+    if (!current || !record || typeof record !== 'object' || !record.group) return null;
+    const group = record.group;
+    if (!group.name) return null;
+    const known = findGroup(group.id);
+    current = normalize({
+      ...current,
+      version: VERSION,
+      groups: known ? current.groups : [...current.groups, group],
+      tasks: [
+        ...current.tasks,
+        ...(Array.isArray(record.tasks) ? record.tasks.filter((task) => task && task.title && !findTask(task.id)) : [])
+      ]
+    });
+    save();
+    return findGroup(group.id);
   }
 
   // ------------------------------------------------------------ automations
@@ -2062,6 +2424,20 @@ const Data = (() => {
     unlinkRepo,
     applyFolderIndex,
     folderFor,
+    takeMigrationBackup,
+    setStorageSnapshot,
+    storageForTask,
+    storageForGroup,
+    archivedForTask,
+    archiveRepo,
+    addArchive,
+    updateArchive,
+    removeArchive,
+    markArchived,
+    unmarkArchived,
+    logStorage,
+    restoreTaskRecord,
+    restoreGroupRecord,
     automation,
     startAutomation,
     updateAutomation,

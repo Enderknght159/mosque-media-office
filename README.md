@@ -64,6 +64,29 @@ Pick a folder once from **الإعدادات ← المستودع**. The app wri
 - Deleting a task never deletes its folder — the link is dropped and the media stays on disk.
 - Opening a folder is one click from the task row, the task card, the task page and the group card.
 
+## Storage and archiving — التخزين والأرشفة
+
+- **Space indicators**: the dashboard carries a «مساحة الوسائط» card (used, capacity, a thin ratio bar, free space). Task cards show a small `hard-drive` chip with the task's size, and the task page breaks every task into three sections — المصادر, المخرجات, `opencode` — with a size and a share of the total for each.
+- **Repository tab** (`المستودع`, under the **التخزين** heading): the primary repository and every external archive with their state (متصل / غير متصل), capacity, last scan, and the largest tasks with expandable section rows. It also shows the last ten archive/restore/delete operations and the trash.
+- **External archive**: link a second drive as an archive repo (`.mmo-archive` receipts on that drive). Moving a section is **verified**: each file is copied, re-read, its SHA-256 compared with the source, written to a receipt, and only then is the source deleted. A failure or a cancellation leaves the source untouched and cleans up only the partial copies.
+- **`.trash` — 7 days**: deleting a task, group or section moves it into `.trash` inside the repository instead of erasing it. Entries stay for seven days with the remaining days shown, and can be restored (the record comes back too) or deleted permanently. Permanent deletion is a separate explicit action.
+- **Drive letter changed**: if the archive drive comes back as `F:` instead of `E:`, the app finds the repository by its `repoId` in `mosque-media-office.repo.json` and offers to re-link it — the files are never touched. An offline repository is shown dimmed with «إعادة ربط», not as missing data.
+- **Per-section actions**: on the task page each section has «أرشفة» (move to the external archive) and «حذف» (move to `.trash`); an archived section shows its archive name and a «استعادة» button instead. The same actions are available from the repository tab.
+
+## Upgrading — الترقية
+
+Run the new installer over the installed copy — do not uninstall first. The `appId` and `productName` are fixed (see the header of `electron-builder.yml`), so NSIS recognises the previous version, replaces it in the same folder, keeps a single entry in «التطبيقات», and does not duplicate the desktop shortcut.
+
+Your data stays in `%APPDATA%\mosque-media-office` (independent of the app version, and not deleted on uninstall). Before the first write after a version upgrade, `store:backup` writes a full pre-migration snapshot to `%APPDATA%\mosque-media-office\backups\pre-v3-<timestamp>.json` — keep it until you have checked the tasks and the repository links.
+
+To verify an upgrade on a build machine that has both installers in `release/`:
+
+```sh
+node test/installer-upgrade.js
+```
+
+It installs 2.1.0 silently into a temporary folder, plants a probe file in the real user-data folder, installs 2.2.0 over it, and checks that the folder, the probe file, and the single uninstall entry survived. Without both installers it prints a skip message and exits 0.
+
 ## Automation with opencode
 
 1. Install [opencode](https://opencode.ai) and make sure `opencode --version` works.
@@ -91,15 +114,18 @@ There is no limit on how many automations run at once.
 | `js/automation-ui.js` | the automation tab, prompts and the start dialog |
 | `js/settings-sections.js` | repository and AI settings sections |
 | `js/repo.js` | renderer side of the file repository |
+| `js/repo-view.js` | the repository tab: capacity, largest tasks, sections, trash |
 | `js/opencode.js` | renderer side of the automation engine |
 | `js/io.js` | Excel and JSON import/export |
 | `js/charts.js` | the report charts |
 | `electron/main.js` | Electron window, `app://` protocol, IPC registration |
 | `electron/preload.js` | the narrow `window.MMO` bridge |
 | `electron/repo.js` | repository folders, manifest and mirror (main process) |
+| `electron/storage.js` | space scan, capacity and volume detection (main process) |
+| `electron/archive.js` | verified archive/restore moves, receipts and `.trash` (main process) |
 | `electron/opencode.js` | process spawning, event parsing, cost accounting (main process) |
-| `docs/v2-plan.md`, `docs/ipc-contract.md` | design notes and the module contracts |
-| `test/` | offline data/repo tests, browser walkthrough, Electron end-to-end test |
+| `docs/v2-plan.md`, `docs/v2.2-plan.md`, `docs/ipc-contract.md` | design notes and the module contracts |
+| `test/` | offline data/repo/storage tests, browser walkthrough, Electron end-to-end and installer-upgrade tests |
 
 ## Tests
 

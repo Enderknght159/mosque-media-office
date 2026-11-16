@@ -68,7 +68,7 @@ const Icons = (() => {
     target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>',
     flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
-    archive: '<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/>',
+    archive: '<rect x="3" y="4" width="18" height="4.5" rx="1.5"/><path d="M5 8.5v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10"/><path d="M12 11v5M9.8 13.8 12 16l2.2-2.2"/>',
     table: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M3 15h18M9 9.5V20"/>',
     sort: '<path d="M4 6h16M6.5 12h11M9.5 18h5"/>',
     award: '<circle cx="12" cy="9" r="5.5"/><path d="m8.5 13.5-1 7 4.5-2.5 4.5 2.5-1-7"/>',
@@ -92,7 +92,14 @@ const Icons = (() => {
     hash: '<path d="M9.5 3.5 7.5 20.5M16.5 3.5l-2 17M4 8.5h16M4 15.5h16"/>',
     timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 10v4l2.5 1.5M9 2.5h6"/>',
     pause: '<rect x="7.5" y="5.5" width="3.2" height="13" rx="1.2"/><rect x="13.3" y="5.5" width="3.2" height="13" rx="1.2"/>',
-    power: '<path d="M12 3v8"/><path d="M6.4 6.8a7.5 7.5 0 1 0 11.2 0"/>'
+    power: '<path d="M12 3v8"/><path d="M6.4 6.8a7.5 7.5 0 1 0 11.2 0"/>',
+    'hard-drive': '<rect x="3" y="5" width="18" height="6.5" rx="2"/><rect x="3" y="12.5" width="18" height="6.5" rx="2"/><path d="M7 8.2h.01M7 15.7h.01M17.5 8.2h.01M17.5 15.7h.01"/>',
+    'folder-source': '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 10.5v5M9.6 13.2 12 10.8l2.4 2.4"/>',
+    'folder-output': '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M12 15.5v-5M9.6 12.8 12 15.2l2.4-2.4"/>',
+    unlink: '<path d="M8.5 15.5 7 17a4.24 4.24 0 0 1-6-6l2.2-2.2"/><path d="m15.5 8.5 1.5-1.5a4.24 4.24 0 0 1 6 6l-2.2 2.2"/><path d="m4 4 16 16"/>',
+    'copy-plus': '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/><path d="M15 15h-3M13.5 12.5v5"/>',
+    'rotate-ccw': '<path d="M3 4v6h6"/><path d="M4.6 15a8 8 0 1 0 1.3-8.7L3 10"/>',
+    'trash-restore': '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M12 17v-5M9.6 14.2 12 11.8l2.4 2.4"/>'
   };
 
   function svg(name, size = 20, cls = '') {

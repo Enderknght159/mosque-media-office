@@ -213,19 +213,17 @@ const Modals = (() => {
     const nextNumber = (groupIdValue) => data.tasks.filter((item) => item.groupId === groupIdValue).length + 1;
     const defaultTitle = (groupValue) => `${groupValue.name} — مهمة ${nextNumber(groupValue.id)}`;
     const initialTitle = task?.title || defaultTitle(group);
-    const groupChoices = data.groups.map((item) => {
-      const itemTemplate = Data.findTemplate(item.templateId);
-      return `
-        <label class="group-choice" style="--group-color:${Utils.esc(item.color)}">
-          <input type="radio" name="groupId" value="${item.id}" ${item.id === group.id ? 'checked' : ''}>
-          <span class="group-choice-dot"></span>
-          <span class="group-choice-text">
-            <strong>${Utils.esc(item.name)}</strong>
-            <small>${itemTemplate ? `${Utils.esc(itemTemplate.name)} · ` : ''}${Utils.formatNumber(itemTemplate?.stages.length || 0)} مراحل</small>
-          </span>
-          <span class="group-choice-check">${Icons.svg('check', 14)}</span>
-        </label>`;
-    }).join('');
+    const groupTaskCount = (groupIdValue) => data.tasks.filter((item) => item.groupId === groupIdValue).length;
+    const groupChoices = data.groups.map((item) => `
+      <label class="group-choice" style="--group-color:${Utils.esc(item.color)}">
+        <input type="radio" name="groupId" value="${item.id}" ${item.id === group.id ? 'checked' : ''}>
+        <span class="group-choice-dot" aria-hidden="true"></span>
+        <span class="group-choice-text">
+          <strong>${Utils.esc(item.name)}</strong>
+          <small>${Utils.formatNumber(groupTaskCount(item.id))} مهام</small>
+        </span>
+        <span class="group-choice-check" aria-hidden="true">${Icons.svg('check', 12)}</span>
+      </label>`).join('');
     const userOptions = `<option value="">بدون تعيين</option>${data.users.map((user) => `<option value="${user.id}" ${task?.assigneeId === user.id ? 'selected' : ''}>${Utils.esc(user.name)}</option>`).join('')}`;
     const selectedPriority = Data.PRIORITIES[task?.priority || 'normal'];
     const priorityChoices = Object.values(Data.PRIORITIES).map((priority) => `
@@ -246,7 +244,7 @@ const Modals = (() => {
         <div class="task-hero">
           <div class="task-hero-head">
             <span>${Icons.svg('layers', 15)} المجموعة</span>
-            <small>اختر المجموعة أولًا — ستُجهّز المراحل تلقائيًا</small>
+            <small>تُجهّز المراحل تلقائيًا</small>
           </div>
           <div class="group-picker">${groupChoices}</div>
         </div>
@@ -407,6 +405,99 @@ const Modals = (() => {
     });
   }
 
+  function storageApi() {
+    return typeof Storage !== 'undefined' ? Storage : null;
+  }
+
+  function storageBytes(bytes) {
+    const api = storageApi();
+    if (api?.format) return api.format(bytes);
+    if (api?.human) return api.human(bytes);
+    return `${Utils.formatNumber(Math.max(0, Number(bytes) || 0))} بايت`;
+  }
+
+  function taskStorageBlock(task, repoLinked) {
+    const api = storageApi();
+    const head = (total) => `
+      <div class="task-storage-head">
+        <h3>${Icons.svg('hard-drive', 16)} المساحة</h3>
+        <span class="task-storage-total">${total}</span>
+      </div>`;
+
+    if (!repoLinked) {
+      return `
+        <div class="task-storage-block">
+          ${head('—')}
+          <div class="task-storage-empty"><span>لم يُربط مستودع</span></div>
+        </div>`;
+    }
+
+    if (!api?.hasSnapshot?.()) {
+      return `
+        <div class="task-storage-block">
+          ${head('—')}
+          <div class="task-storage-empty">
+            <span>لم يُفحص المستودع بعد</span>
+            <button type="button" class="icon-btn mini" data-action="scan-storage" data-task-id="${task.id}" title="فحص المساحة الآن" aria-label="فحص المساحة الآن">${Icons.svg('refresh', 15)}</button>
+          </div>
+        </div>`;
+    }
+
+    const sections = api.sectionsFor ? api.sectionsFor(task) : [];
+    const total = sections.reduce((sum, section) => sum + Math.max(0, Number(section.bytes) || 0), 0);
+    const archivedAny = sections.some((section) => section.archived);
+    const pctOf = (bytes) => (api.percent ? api.percent(bytes, total) : 0);
+
+    const archivedChip = (section) => {
+      const info = section.archived;
+      if (!info) return '';
+      const repoLabel = api.archiveFor?.(info.archiveId || info.repoId)?.label || 'المستودع الخارجي';
+      return `<span class="task-storage-archived">${Icons.svg('archive', 11)} ${Utils.esc(repoLabel)} · مؤرشف</span>`;
+    };
+
+    const rows = sections.map((section) => {
+      const bytes = Math.max(0, Number(section.bytes) || 0);
+      const label = Utils.esc(section.label || api.sectionLabel?.(section.key) || section.key);
+      const archived = Boolean(section.archived);
+      const archiveTitle = `أرشفة ${label} إلى المستودع الخارجي`;
+      const restoreTitle = `استعادة ${label} من الأرشيف`;
+      const trashTitle = `حذف ${label} إلى سلة المحذوفات`;
+      return `
+        <div class="task-storage-row">
+          <span class="task-storage-icon">${Icons.svg(section.icon || 'folder', 15)}</span>
+          <span class="task-storage-name">${label}${archived ? archivedChip(section) : ''}</span>
+          <span class="task-storage-size">${storageBytes(bytes)}</span>
+          <span class="task-storage-pct">${pctOf(bytes)}%</span>
+          <span class="task-storage-actions icon-actions">
+            ${archived
+              ? `<button type="button" class="icon-btn mini" data-action="restore-section" data-task-id="${task.id}" data-section="${section.key}" title="${restoreTitle}" aria-label="${restoreTitle}">${Icons.svg('trash-restore', 15)}</button>`
+              : `<button type="button" class="icon-btn mini" data-action="archive-section" data-task-id="${task.id}" data-section="${section.key}" title="${archiveTitle}" aria-label="${archiveTitle}">${Icons.svg('archive', 15)}</button>`}
+            <button type="button" class="icon-btn mini is-danger" data-action="trash-section" data-task-id="${task.id}" data-section="${section.key}" title="${trashTitle}" aria-label="${trashTitle}">${Icons.svg('trash', 15)}</button>
+          </span>
+        </div>`;
+    }).join('');
+
+    if (!total && !archivedAny) {
+      return `
+        <div class="task-storage-block">
+          ${head(storageBytes(0))}
+          <div class="task-storage-empty"><span>لا توجد ملفات في هذه المهمة بعد</span></div>
+        </div>`;
+    }
+
+    const segments = sections
+      .filter((section) => Number(section.bytes) > 0)
+      .map((section) => `<span class="is-${section.key}" style="width:${pctOf(section.bytes)}%" title="${Utils.esc(`${section.label} · ${storageBytes(section.bytes)}`)}"></span>`)
+      .join('');
+
+    return `
+      <div class="task-storage-block">
+        ${head(storageBytes(total))}
+        <div class="task-storage-bar" role="presentation">${segments}</div>
+        <div class="task-storage-rows">${rows}</div>
+      </div>`;
+  }
+
   function openTaskDetail(taskId) {
     const task = Data.findTask(taskId);
     if (!task) {
@@ -416,6 +507,7 @@ const Modals = (() => {
     const group = Data.findGroup(task.groupId);
     const template = Data.findTemplate(task.templateId);
     const assignee = Data.findUser(task.assigneeId);
+    const data = Data.get();
     const progress = Data.taskProgress(task);
     const status = Data.taskStatus(task);
     const next = Data.nextStage(task);
@@ -474,7 +566,7 @@ const Modals = (() => {
         ${due.overdue ? `<div class="overdue-banner">${Icons.svg('alert', 16)} المهمة متأخرة عن موعدها. ${Utils.esc(due.text)}.</div>` : ''}
         <div class="task-action-row">
           <button class="icon-btn" data-action="open-task-folder" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المهمة" aria-label="فتح مجلد المهمة">${Icons.svg('folder-open', 17)}</button>
-          <button class="icon-btn" data-action="open-task-output" data-task-id="${task.id}" data-source="detail" title="فتح مجلد المخرجات" aria-label="فتح مجلد المخرجات">${Icons.svg('folder', 17)}</button>
+          <button class="icon-btn" data-action="archive-task" data-task-id="${task.id}" data-source="detail" title="أرشفة المهمة" aria-label="أرشفة المهمة">${Icons.svg('archive', 17)}</button>
           <button class="icon-btn task-action-primary" data-action="start-automation" data-task-id="${task.id}" data-source="detail" title="${Utils.esc(automationTitle)}" aria-label="${Utils.esc(automationTitle)}">${Icons.svg('robot', 17)}</button>
         </div>
         ${activeJob ? `
@@ -502,6 +594,7 @@ const Modals = (() => {
           <div class="meta-item"><span>القالب</span><strong>${Utils.esc(template?.name || 'بدون قالب')}</strong></div>
           <div class="meta-item"><span>تاريخ الإنشاء</span><strong>${Utils.esc(createdAt)}</strong></div>
         </div>
+        ${taskStorageBlock(task, Boolean(data.settings?.repo))}
         <div class="detail-progress">
           <div class="detail-progress-head"><span>تقدم المهمة</span><strong>${progress.done} من ${progress.total} مراحل · ${progress.pct}%</strong></div>
           ${Views.progressBar(progress.pct, group?.color || 'var(--accent)')}
@@ -524,7 +617,7 @@ const Modals = (() => {
                 <span class="task-auto-model" dir="ltr" title="${Utils.esc(job.model || 'بدون موديل')}">${Utils.esc(job.model || 'بدون موديل')}</span>
                 <span class="task-auto-cost">${Views.formatCost(job.usage?.costUSD)}</span>
                 <span class="task-auto-time">${Utils.relativeTime(job.startedAt)}</span>
-                <button class="icon-btn xs" data-action="open-job" data-job-id="${job.id}" title="تفاصيل التشغيل" aria-label="تفاصيل التشغيل">${Icons.svg('external', 14)}</button>
+                <button class="icon-btn xs" data-action="open-job" data-job-id="${job.id}" title="تفاصيل التشغيل" aria-label="تفاصيل التشغيل">${Icons.svg('info', 14)}</button>
               </div>`).join('')}
           </div>` : ''}
       </div>`;
@@ -532,7 +625,7 @@ const Modals = (() => {
       <div class="modal-footer-row">
         <div class="footer-left icon-actions">
           <button class="icon-btn is-danger" data-action="delete-task" data-task-id="${task.id}" data-source="detail" title="حذف المهمة" aria-label="حذف المهمة">${Icons.svg('trash', 17)}</button>
-          <button class="icon-btn" data-action="duplicate-task" data-task-id="${task.id}" data-source="detail" title="تكرار المهمة" aria-label="تكرار المهمة">${Icons.svg('copy', 17)}</button>
+          <button class="icon-btn" data-action="duplicate-task" data-task-id="${task.id}" data-source="detail" title="تكرار المهمة" aria-label="تكرار المهمة">${Icons.svg('copy-plus', 17)}</button>
         </div>
         <div class="footer-right">
           <button class="icon-btn" data-action="edit-task" data-task-id="${task.id}" data-source="detail" title="تعديل المهمة" aria-label="تعديل المهمة">${Icons.svg('edit', 17)}</button>
