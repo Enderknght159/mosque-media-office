@@ -143,6 +143,8 @@ const sorted = Data.sortTasks(Data.tasks(), 'storage-desc');
 check('largest task first', sorted[0].id === 'task_a', sorted.map((task) => task.id).join(','));
 const ascending = Data.sortTasks(Data.tasks(), 'storage-asc');
 check('smallest task first', ascending[0].id === 'task_b', ascending.map((task) => task.id).join(','));
+const byDate = Data.sortTasks(Data.tasks(), 'date-desc');
+check('newest task date first', byDate[0].id === 'task_b', byDate.map((task) => task.date).join(','));
 
 section('restore deleted records');
 const taskRecord = JSON.parse(JSON.stringify(Data.findTask('task_b')));

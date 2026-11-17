@@ -461,9 +461,9 @@
 }
 
 @media (max-width: 400px) {
-  .ss-mono-text { font-size: 9px; }
+  .ss-mono-text { font-size: 9.5px; }
 
-  .ss-meta { font-size: 8.5px; }
+  .ss-meta { font-size: 9.5px; }
 
   .ss-switch-label { font-size: 9.5px; }
 

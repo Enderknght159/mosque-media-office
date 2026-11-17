@@ -1,6 +1,6 @@
 {
   "name": "mosque-media-office",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "نظام متابعة إنجازات المكتب الإعلامي في المسجد",
   "main": "electron/main.js",
   "scripts": {

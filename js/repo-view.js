@@ -429,14 +429,6 @@ const RepoView = (() => {
       </article>`;
   }
 
-  function addCardMarkup() {
-    return `
-      <button type="button" class="repo-add-card" data-action="repo-link-archive">
-        <span class="repo-add-icon">${Icons.svg('plus', 20)}</span>
-        <span class="repo-add-copy"><strong>ربط مستودع خارجي</strong><small>قرص خارجي أو مجلد أرشيف.</small></span>
-      </button>`;
-  }
-
   function sortHeader(key, label, numeric = false) {
     const active = sort.key === key;
     const ariaSort = active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
@@ -710,7 +702,6 @@ const RepoView = (() => {
         <div class="repo-cards-grid">
           ${primaryCard(repo, primary, snap)}
           ${archives.map((archive) => archiveCard(archive, entries.find((entry) => entry.id === archive.id) || null, current)).join('')}
-          ${addCardMarkup()}
         </div>
         ${tasksTableMarkup(current, snap)}
         <div class="repo-bottom-grid">

@@ -1,5 +1,5 @@
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 13px; margin-bottom: 24px; }
-.stat-card { position: relative; padding: 17px 17px 16px; overflow: hidden; }
+.stat-card { position: relative; display: flex; flex-direction: column; padding: 17px 17px 16px; min-height: 128px; overflow: hidden; }
 .stat-card::after {
   content: '';
   position: absolute;
@@ -11,21 +11,50 @@
   background: color-mix(in srgb, var(--stat-color) 7%, transparent);
   pointer-events: none;
 }
-.stat-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+/* Top row: icon + label together; the trend pill keeps the far edge. */
+.stat-card-top { display: flex; align-items: flex-start; gap: 8px; }
 .stat-icon {
   width: 34px;
   height: 34px;
+  flex: 0 0 auto;
   border-radius: 10px;
   display: grid;
   place-items: center;
   background: color-mix(in srgb, var(--stat-color) 10%, transparent);
   color: var(--stat-color);
 }
-.stat-trend { font-size: 9px; font-weight: 650; color: var(--red); background: var(--red-soft); padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.stat-card .stat-label {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.stat-trend { flex: 0 0 auto; margin-inline-start: auto; font-size: 9px; font-weight: 650; color: var(--red); background: var(--red-soft); padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
 .stat-trend.is-info { color: var(--text-2); background: var(--surface-2); }
-.stat-value { display: block; margin-top: 13px; font-size: 27px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
-.stat-label { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 650; }
-.stat-note { display: block; margin-top: 5px; font-size: 9.5px; line-height: 1.5; color: var(--text-3); }
+/* The number owns the remaining space and is centered both ways. */
+.stat-card .stat-value {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  margin-top: 8px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .stat-card .stat-value { font-size: 30px; }
+}
+@media (max-width: 400px) {
+  .stat-card .stat-value { font-size: 26px; }
+}
 
 .shortcuts-section { margin-bottom: 24px; }
 .shortcuts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 9px; }
@@ -43,9 +72,8 @@
 }
 .shortcut:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
 .shortcut-icon { width: 36px; height: 36px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px; background: var(--surface-2); color: var(--accent); }
-.shortcut-body { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.5; }
-.shortcut-body strong { font-size: 11.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.shortcut-body span { font-size: 9px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: ltr; text-align: start; }
+.shortcut-body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; flex: 1; line-height: 1.5; text-align: center; }
+.shortcut-body strong { font-size: 12px; font-weight: 650; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shortcut-arrow { color: var(--text-3); flex: 0 0 auto; }
 .shortcut-add { border: 1.5px dashed var(--border-strong); background: transparent; box-shadow: none; color: var(--text-2); }
 .shortcut-add .shortcut-icon { background: var(--accent-soft); color: var(--accent); }
@@ -97,10 +125,10 @@
 .donut-center strong { font-size: 24px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .donut-center span { font-size: 9px; color: var(--text-3); }
 .legend { width: 100%; display: flex; flex-direction: column; gap: 5px; }
-.legend-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 10px; color: var(--text-2); }
+.legend-row { display: flex; justify-content: flex-start; align-items: center; gap: 6px; font-size: 10px; color: var(--text-2); }
 .legend-row span { display: flex; align-items: center; gap: 6px; }
 .legend-row i { width: 6px; height: 6px; border-radius: 50%; }
-.legend-row strong { font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.legend-row strong { font-size: 10px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .group-progress-list, .member-list { display: flex; flex-direction: column; gap: 1px; }
 .group-progress-row {
   display: grid;
@@ -292,8 +320,8 @@
   overflow: hidden;
   margin-bottom: 4px;
 }
-.task-stage-line { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 9.5px; color: var(--text-3); min-height: 17px; }
-.task-stage-line strong { color: var(--text-2); font-weight: 600; font-size: 9.5px; }
+.task-stage-line { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 10px; color: var(--text-3); min-height: 17px; }
+.task-stage-line strong { color: var(--text-2); font-weight: 600; font-size: 10px; }
 .task-done-label { display: inline-flex; align-items: center; gap: 4px; color: var(--green); font-weight: 600; }
 .task-progress-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 7px; }
 .task-progress-row > span { font-size: 8.5px; color: var(--text-3); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
@@ -430,7 +458,7 @@
   font-size: 9.5px;
 }
 .task-table-scroll { width: 100%; overflow: auto; }
-.task-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.task-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
 .task-table th {
   position: sticky;
   top: 0;
@@ -439,7 +467,7 @@
   border-bottom: 1px solid var(--border);
   background: var(--surface-solid);
   color: var(--text-3);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   text-align: start;
   white-space: nowrap;
@@ -467,7 +495,7 @@
   text-align: start;
 }
 .task-table-title strong { font-size: 10.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.task-table-title small { font-size: 8px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-table-title small { font-size: 9px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-table-title:hover strong { color: var(--accent); }
 .stage-cell-btn {
   max-width: 132px;

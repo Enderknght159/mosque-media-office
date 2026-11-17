@@ -1,7 +1,7 @@
 /* واجهة التخزين والأرشيف والسلة في الواجهة الرسومية.
    كل العمليات الحسّاسة تُنفَّذ في العملية الرئيسية؛ هذا الملف ينسّق فقط. */
 const Storage = (() => {
-  const UNIT = ['بايت', 'ك.ب', 'م.ب', 'غ.ب', 'ت.ب'];
+  const UNIT = ['B', 'KB', 'MB', 'GB', 'TB'];
   const SECTION_LABELS = { sources: 'المصادر', output: 'المخرجات', opencode: 'opencode' };
   const SECTION_ICONS = { sources: 'folder-source', output: 'folder-output', opencode: 'terminal' };
   let scanning = false;
@@ -48,7 +48,7 @@ const Storage = (() => {
 
   function human(bytes) {
     const value = Math.max(0, Number(bytes) || 0);
-    if (value < 1024) return `${Math.round(value)} بايت`;
+    if (value < 1024) return `${Math.round(value)} B`;
     const exponent = Math.min(UNIT.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
     const size = value / (1024 ** exponent);
     const digits = size >= 100 ? 0 : size >= 10 ? 1 : 2;

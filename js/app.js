@@ -155,6 +155,9 @@ const App = (() => {
       </section>`;
     modalRoot.appendChild(layer);
     modalLayers.push({ el: layer, onDismiss });
+    try {
+      window.Views?.quietSubtitles?.(layer);
+    } catch (error) {}
     document.body.classList.add('modal-open');
     if (onMount) onMount(layer);
     requestAnimationFrame(() => layer.classList.add('visible'));
@@ -243,6 +246,7 @@ const App = (() => {
     const meta = Views.pageMeta(state.route);
     appRoot.innerHTML = Views.render(state.route, data, state);
     try {
+      window.Views?.quietSubtitles?.(appRoot);
       if (state.route === 'settings') {
         window.SettingsSections?.bind?.(appRoot);
         window.Views?.layoutSettings?.(appRoot);

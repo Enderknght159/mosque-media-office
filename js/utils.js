@@ -318,10 +318,17 @@ const Utils = (() => {
   }
 
   function humanSize(bytes) {
-    const size = Number(bytes) || 0;
-    if (size < 1024) return `${size} بايت`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} ك.ب`;
-    return `${(size / (1024 * 1024)).toFixed(2)} م.ب`;
+    const size = Math.max(0, Number(bytes) || 0);
+    if (size < 1024) return `${Math.round(size)} B`;
+    const units = ['KB', 'MB', 'GB', 'TB'];
+    let value = size;
+    let index = -1;
+    do {
+      value /= 1024;
+      index += 1;
+    } while (value >= 1024 && index < units.length - 1);
+    const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+    return `${value.toFixed(digits)} ${units[index]}`;
   }
 
   function plural(count, one, two, few, many) {

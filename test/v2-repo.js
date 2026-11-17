@@ -203,7 +203,7 @@ async function waitForServer() {
     await page.screenshot({ path: path.join(shots, '32-repository.png'), fullPage: true });
 
     const text = await page.locator('.content').innerText();
-    for (const needle of ['المستودع', 'هارد الأرشيف', 'غير متصل', 'أكبر المهام', 'سلة المحذوفات', 'غ.ب', 'بقي']) {
+    for (const needle of ['المستودع', 'هارد الأرشيف', 'غير متصل', 'أكبر المهام', 'سلة المحذوفات', 'GB', 'بقي']) {
       if (!text.includes(needle)) errors.push(`repository is missing: ${needle}`);
     }
     const missingLabels = await page.evaluate(() => [...document.querySelectorAll('.content button.icon-btn, .content a.icon-btn')]

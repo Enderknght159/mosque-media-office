@@ -413,7 +413,7 @@ const Modals = (() => {
     const api = storageApi();
     if (api?.format) return api.format(bytes);
     if (api?.human) return api.human(bytes);
-    return `${Utils.formatNumber(Math.max(0, Number(bytes) || 0))} بايت`;
+    return `${Utils.formatNumber(Math.max(0, Number(bytes) || 0))} B`;
   }
 
   function taskStorageBlock(task, repoLinked) {

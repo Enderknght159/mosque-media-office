@@ -134,28 +134,48 @@ const Views = (() => {
       </div>`;
   }
 
-  function pageHead(title, subtitle, actions = '', extra = '') {
+  /** العنوان الفرعي لم يبق ظاهرًا: يصبح تلميحًا على نص الصفحة، والـ meta سطر ظاهر (تاريخ مثلًا). */
+  function pageHead(title, subtitle, actions = '', extra = '', meta = '') {
+    const hint = subtitle ? ` title="${Utils.esc(subtitle)}"` : '';
     return `
       <div class="page-head">
-        <div class="page-head-text">
+        <div class="page-head-text"${hint}>
           ${extra ? `<div class="page-eyebrow">${extra}</div>` : ''}
           <h1>${Utils.esc(title)}</h1>
-          <p>${Utils.esc(subtitle)}</p>
+          ${meta ? `<p class="page-meta">${Utils.esc(meta)}</p>` : ''}
         </div>
         ${actions ? `<div class="page-actions">${actions}</div>` : ''}
       </div>`;
   }
 
+  /**
+   * يحوّل شرح كل بطاقة/قسم (p داخل .card-head و.section-head) إلى تلميح على العنوان:
+   * النص نفسه يوضع في title ثم يُخفى بصريًا بـ sr-only. آمن للتكرار ولا يرمي أخطاء.
+   */
+  function quietSubtitles(root) {
+    try {
+      const scope = root && typeof root.querySelectorAll === 'function' ? root : null;
+      if (!scope) return;
+      scope.querySelectorAll('.card-head p, .section-head p').forEach((paragraph) => {
+        const text = (paragraph.textContent || '').trim();
+        if (!text) return;
+        const head = paragraph.closest('.card-head') || paragraph.closest('.section-head');
+        if (head && !head.getAttribute('title')) head.setAttribute('title', text);
+        paragraph.classList.add('sr-only');
+      });
+    } catch (error) {}
+  }
+
   function statCard({ icon, color, label, value, note, trend, trendTone = '' }) {
+    const hint = note ? ` title="${Utils.esc(note)}"` : '';
     return `
-      <div class="stat-card card" style="--stat-color:${color}">
+      <div class="stat-card card" style="--stat-color:${color}"${hint}>
         <div class="stat-card-top">
           <span class="stat-icon">${Icons.svg(icon, 20)}</span>
+          <span class="stat-label">${Utils.esc(label)}</span>
           ${trend ? `<span class="stat-trend ${trendTone ? `is-${trendTone}` : ''}">${trend}</span>` : ''}
         </div>
         <strong class="stat-value">${value}</strong>
-        <span class="stat-label">${Utils.esc(label)}</span>
-        <span class="stat-note">${note}</span>
       </div>`;
   }
 
@@ -206,7 +226,7 @@ const Views = (() => {
       color: '#30b0c7',
       label: 'مساحة الوسائط',
       value: snapshot ? Utils.esc(api.format(used)) : '—',
-      note: snapshot ? Utils.esc(`من ${api.human(capacity)}`) : 'لم يُفحص المستودع بعد',
+      note: snapshot ? `من ${api.human(capacity)}` : 'لم يُفحص المستودع بعد',
       trend: snapshot && pct ? `${pct}%` : '',
       trendTone: 'info'
     });
@@ -312,7 +332,6 @@ const Views = (() => {
         <button class="icon-btn" data-action="toggle-theme" title="${isDark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}" aria-label="${isDark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}">
           ${Icons.svg(isDark ? 'sun' : 'moon', 19)}
         </button>
-        <button class="icon-btn topbar-add" data-action="add-task" title="مهمة جديدة" aria-label="مهمة جديدة">${Icons.svg('plus', 19)}</button>
       </header>`;
   }
 
@@ -364,7 +383,6 @@ const Views = (() => {
         ${shortcutIcon(link)}
         <span class="shortcut-body">
           <strong>${Utils.esc(link.name)}</strong>
-          <span>${Utils.esc(shortcutDisplay(link.url))}</span>
         </span>
         ${Icons.svg('external-link', 16, 'shortcut-arrow')}
       </a>`;
@@ -377,7 +395,6 @@ const Views = (() => {
         <div class="section-head">
           <div>
             <h2>اختصارات المكتب</h2>
-            <p>روابط سريعة للمنصات والملفات والأدوات.</p>
           </div>
           <a class="text-link" href="#/settings" data-nav="settings">إدارة ${Icons.svg('chevron-left', 14)}</a>
         </div>
@@ -385,7 +402,7 @@ const Views = (() => {
           ${links.map(shortcutTile).join('')}
           <button class="shortcut shortcut-add" data-action="add-link">
             <span class="shortcut-icon">${Icons.svg('plus', 20)}</span>
-            <span class="shortcut-body"><strong>إضافة اختصار</strong><span>صفحة، ملف، أو أداة</span></span>
+            <span class="shortcut-body"><strong>إضافة اختصار</strong></span>
           </button>
         </div>
       </section>`;
@@ -432,7 +449,7 @@ const Views = (() => {
           ${status === 'done'
             ? `<span class="task-done-label">${Icons.svg('check-circle', 15)} اكتملت المهمة</span>`
             : next
-              ? `<span>المرحلة الحالية</span><strong>${Utils.esc(next.name)}</strong>`
+              ? `<strong>${Utils.esc(next.name)}</strong>`
               : '<span>لم تبدأ المراحل بعد</span>'}
         </div>
         <div class="task-progress-row">
@@ -627,7 +644,7 @@ const Views = (() => {
                     <td class="sticky-col">
                       <button class="task-table-title" data-action="open-task" data-task-id="${task.id}">
                         <strong>${isDone ? `<span class="done-mark">${Icons.svg('check-circle', 13)}</span>` : ''}${Utils.esc(task.title)}</strong>
-                        <small>${isDone ? 'مكتملة' : `الحالية: ${Utils.esc(Data.nextStage(task)?.name || '—')}`}</small>
+                        <small>${isDone ? 'مكتملة' : `${Utils.esc(Data.nextStage(task)?.name || '—')}`}</small>
                       </button>
                     </td>
                     <td>${groupChip(group)}</td>
@@ -738,7 +755,7 @@ const Views = (() => {
     const empty = overview.total === 0;
 
     return `
-      ${pageHead('نظرة عامة', dateLine, `<button class="icon-btn" data-action="add-task" title="إضافة مهمة" aria-label="إضافة مهمة">${Icons.svg('plus', 18)}</button>`, data.settings.tagline)}
+      ${pageHead('نظرة عامة', '', `<button class="icon-btn" data-action="add-task" title="إضافة مهمة" aria-label="إضافة مهمة">${Icons.svg('plus', 18)}</button>`, data.settings.tagline, dateLine)}
       ${demoBanner(data, state)}
       <div class="stats-grid">
         ${statCard({
@@ -810,7 +827,7 @@ const Views = (() => {
                 ariaLabel: 'توزيع حالات المهام'
               })}
               <div class="legend">
-                ${segments.map((segment) => `<div class="legend-row"><span><i style="background:${segment.color}"></i>${segment.label}</span><strong>${Utils.formatNumber(segment.value)}</strong></div>`).join('')}
+                ${segments.map((segment) => `<div class="legend-row"><span><i style="background:${segment.color}"></i>${segment.label} <strong>${Utils.formatNumber(segment.value)}</strong></span></div>`).join('')}
               </div>
             </div>
           </section>
@@ -906,6 +923,7 @@ const Views = (() => {
     ];
     const sortItems = [
       { value: 'updated', label: 'الأحدث تحديثًا', icon: 'clock' },
+      { value: 'date-desc', label: 'تاريخ المهمة (الأحدث)', icon: 'calendar' },
       { value: 'due', label: 'تاريخ الاستحقاق', icon: 'calendar' },
       { value: 'priority', label: 'الأولوية', icon: 'flag' },
       { value: 'oldest', label: 'الأقدم', icon: 'history' },
@@ -913,7 +931,7 @@ const Views = (() => {
       { value: 'storage-asc', label: 'المساحة (الأصغر)', icon: 'sort' }
     ];
     return `
-      ${pageHead('المهام', `${Utils.formatNumber(data.tasks.length)} مهمة إجمالًا · ${Utils.formatNumber(counts.progress)} قيد العمل`, `<button class="btn primary" data-action="add-task">${Icons.svg('plus', 17)} مهمة جديدة</button>`)}
+      ${pageHead('المهام', '', `<button class="btn primary" data-action="add-task">${Icons.svg('plus', 17)} مهمة جديدة</button>`)}
       <div class="tasks-toolbar card">
         <label class="search-box">
           ${Icons.svg('search', 18)}
@@ -1737,6 +1755,7 @@ const Views = (() => {
     emptyState,
     pageHead,
     statCard,
+    quietSubtitles,
     logo,
     badgeChip,
     badgeList,

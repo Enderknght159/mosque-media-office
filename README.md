@@ -14,6 +14,7 @@ The interface is Arabic and right-to-left.
 - Reports with charts built from the same data, including an automation section (runs, success rate, cost, tokens, cost per model and per group)
 - Export to Excel or JSON, and import either format back
 - Light and dark themes
+- **Calm dashboard** — five equal stat cards with a large centered number, and explanatory subtitles moved to hover tooltips instead of crowding the screen; task dates can be sorted newest-first
 - **File repository** — one folder per group and one folder per task on the office's disk, indexed in `mosque-media-office.repo.json`
 - **AI automation** — a task can be handed to `opencode` with an editable prompt; results land in `output/`, technical files in `opencode/`
 

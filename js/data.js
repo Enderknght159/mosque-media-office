@@ -1309,6 +1309,15 @@ const Data = (() => {
         const diff = PRIORITIES[b.priority].rank - PRIORITIES[a.priority].rank;
         return diff !== 0 ? diff : new Date(b.updatedAt) - new Date(a.updatedAt);
       });
+    } else if (sort === 'date-desc') {
+      copy.sort((a, b) => {
+        const left = String(a.date || '');
+        const right = String(b.date || '');
+        if (left === right) return new Date(b.updatedAt) - new Date(a.updatedAt);
+        if (!left) return 1;
+        if (!right) return -1;
+        return right.localeCompare(left);
+      });
     } else if (sort === 'oldest') {
       copy.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     } else if (sort === 'storage-desc' || sort === 'storage-asc') {
