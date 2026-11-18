@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0c0e">
+  <meta name="description" content="عرض تقديمي لنظام متابعة المكتب الإعلامي في المسجد: الميزات، الأهمية، والاستخدام اليومي.">
+  <title>من الفكرة إلى المنشور · نظام المكتب الإعلامي</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="stylesheet" href="presentation.css">
+</head>
+<body>
+  <a class="skip-link" href="#story">تخطَّ إلى محتوى العرض</a>
+  <div class="scroll-progress" aria-hidden="true"><span id="scroll-progress-bar"></span></div>
+
+  <header class="topbar">
+    <a class="brand" href="#hero" aria-label="نظام متابعة المكتب الإعلامي — البداية">
+      <img src="assets/logo.svg" alt="" width="34" height="34">
+      <span><strong>المكتب الإعلامي</strong>نظام المتابعة</span>
+    </a>
+    <nav class="topnav" aria-label="روابط العرض">
+      <a href="#system">المزايا</a>
+      <a href="#tasks">المهام</a>
+      <a href="#automation">الأتمتة</a>
+      <a href="#daily">الاستخدام اليومي</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-text" type="button" id="fullscreen-toggle" title="عرض ملء الشاشة" aria-label="عرض ملء الشاشة">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M16 21h3a2 2 0 0 0 2-2v-3M8 21H5a2 2 0 0 1-2-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>ملء الشاشة</span>
+      </button>
+      <a class="btn btn-small btn-primary" href="https://github.com/Enderknght159/mosque-media-office" target="_blank" rel="noopener">المستودع</a>
+    </div>
+  </header>
+
+  <main id="deck">
+
+    <!-- ============================================================ -->
+    <!-- 01 · الغلاف                                                   -->
+    <!-- ============================================================ -->
+    <section class="slide hero" id="hero" data-slide="hero" data-label="البداية" aria-labelledby="hero-title">
+      <div class="hero-arch" aria-hidden="true"></div>
+      <div class="frame hero-frame">
+        <div class="hero-copy">
+          <p class="kicker" data-reveal><span class="kicker-dot"></span> نظام متابعة المكتب الإعلامي</p>
+          <h1 id="hero-title" data-reveal style="--d:1">من الفكرة<br>إلى المنشور.</h1>
+          <p class="hero-lede" data-reveal style="--d:2">نظام واحد يجمع مهام المكتب الإعلامي ومراحلها وفريقها وملفاتها وأتمتتها. كل خطوة تُسجَّل، وكل ملف له مكان، وكل تقرير جاهز قبل أن يُطلب.</p>
+          <div class="hero-actions" data-reveal style="--d:3">
+            <a class="btn btn-primary" href="#story">ابدأ العرض
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="#daily">كيف نستخدمه كل يوم؟</a>
+          </div>
+          <ul class="hero-facts" data-reveal style="--d:4">
+            <li><b>محلي بالكامل</b><span>يعمل بلا إنترنت، وبياناتك على جهازك.</span></li>
+            <li><b>تسع شاشات</b><span>من المهمة إلى التقرير إلى الأرشيف.</span></li>
+            <li><b>سطح مكتب</b><span>تطبيق Windows، ونسخة متصفح للمتابعة.</span></li>
+          </ul>
+        </div>
+
+        <div class="hero-stage" data-reveal style="--d:2">
+          <figure class="screenshot screenshot-hero">
+            <div class="window-bar" aria-hidden="true">
+              <i></i><i></i><i></i>
+              <span dir="ltr">mosque-media-office — نظرة عامة</span>
+            </div>
+            <img src="assets/ui/dashboard-light.png" width="1600" height="1000" alt="الشاشة الرئيسية للنظام: خمس بطاقات إحصاء، منحنى نشاط الإنجاز، تقدم المجموعات، ومهام قيد المتابعة.">
+          </figure>
+          <div class="pipeline" aria-label="مسار العمل النموذجي في المكتب">
+            <span class="pipeline-label">خط الإنتاج</span>
+            <div class="pipeline-track" aria-hidden="true"><span class="pipeline-fill"></span></div>
+            <ol>
+              <li>الفكرة</li>
+              <li>التصوير</li>
+              <li>التفريغ</li>
+              <li>المونتاج</li>
+              <li>النشر</li>
+            </ol>
+          </div>
+          <p class="caption">لقطة من النظام — البيانات المعروضة تجريبية.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 02 · المشكلة                                                  -->
+    <!-- ============================================================ -->
+    <section class="slide slide-problem" id="story" data-slide="story" data-label="المشكلة" aria-labelledby="story-title">
+      <div class="frame">
+        <div class="split split-story">
+          <div class="story-lead">
+            <h2 id="story-title" data-reveal>المشكلة ليست<br>في الإنتاج.<br>في الذاكرة.</h2>
+            <p class="lede" data-reveal style="--d:1">المكتب الإعلامي ينتج كثيرًا: خطب، دروس، ريلز، أغلفة، ومنشورات. لكن أين تُحفظ النسخة الأخيرة؟ من أنجز المونتاج؟ ماذا نُشر؟ ومتى امتلأ الهارد؟</p>
+            <p class="problem-close" data-reveal style="--d:2">العمل موجود.<br>الذاكرة هي الغائبة.</p>
+          </div>
+
+          <ol class="memory-list" aria-label="أسئلة تتكرر في يوم عمل">
+            <li data-reveal style="--d:1">
+              <span class="memory-time">الجمعة · ١٢:٤٠</span>
+              <strong>«أرسل لي النسخة النهائية.»</strong>
+              <p>أي نسخة؟ في أي محادثة؟ ومن عدّلها آخر مرة؟</p>
+            </li>
+            <li data-reveal style="--d:2">
+              <span class="memory-time">الأحد · ٩:١٥</span>
+              <strong>«من صوّر خطبة الجمعة؟»</strong>
+              <p>سؤال يتكرر كل أسبوع، والإجابة في ذاكرة شخص واحد.</p>
+            </li>
+            <li data-reveal style="--d:3">
+              <span class="memory-time">الثلاثاء · ٦:٣٠</span>
+              <strong>«هل نُشر الريل؟»</strong>
+              <p>بين التصميم والنشر ثلاث محادثات، ولا حالة واحدة واضحة.</p>
+            </li>
+            <li data-reveal style="--d:4">
+              <span class="memory-time">الخميس · ١١:٠٥</span>
+              <strong>«الهارد ممتلئ.»</strong>
+              <p>لا نعرف أي مهمة أخذت المساحة، ولا ما يمكن أرشفته بأمان.</p>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 03 · النظام                                                   -->
+    <!-- ============================================================ -->
+    <section class="slide slide-system" id="system" data-slide="system" data-label="النظام" aria-labelledby="system-title">
+      <div class="frame">
+        <div class="system-head">
+          <div>
+            <h2 id="system-title" data-reveal>غرفة عمليات المكتب،<br>على شاشة واحدة.</h2>
+          </div>
+          <p class="lede" data-reveal style="--d:1">النظام لا يضيف إدارة فوق عملك؛ بل يسجّل العمل نفسه: المهمة، مرحلتها، من أنجزها، ملفاتها، وتكلفة تشغيلها. كل شيء يبقى في سياقه.</p>
+        </div>
+
+        <figure class="screenshot screenshot-wide" data-reveal style="--d:2">
+          <div class="window-bar" aria-hidden="true">
+            <i></i><i></i><i></i>
+            <span dir="ltr">mosque-media-office — dashboard</span>
+          </div>
+          <img src="assets/ui/dashboard-dark.png" width="1600" height="1000" alt="نظرة عامة داكنة: إحصاءات المهام والمراحل، منحنى النشاط، تقدم المجموعات، والأتمتة." loading="lazy">
+        </figure>
+
+        <div class="stat-line" data-reveal style="--d:3" aria-label="أرقام من البيانات التجريبية">
+          <div><b data-count="8">8</b><span>مهام قيد العمل</span></div>
+          <div><b data-count="31">31</b><span>مرحلة منجزة</span></div>
+          <div><b data-count="12">12</b><span>مهمة داخل المجموعات</span></div>
+          <div><b dir="ltr">$0.27</b><span>تكلفة الأتمتة · ٣٠ يومًا</span></div>
+        </div>
+        <p class="caption caption-line" data-reveal style="--d:3">أرقام من البيانات التجريبية الظاهرة في اللقطة — ليست إحصاءات المكتب.</p>
+
+        <div class="screen-index" data-reveal style="--d:4">
+          <div>
+            <h3>المتابعة</h3>
+            <ul>
+              <li><a href="#system">نظرة عامة</a></li>
+              <li><a href="#tasks">المهام</a></li>
+              <li><a href="#groups">المجموعات</a></li>
+              <li><a href="#tasks">القوالب</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>الفريق</h3>
+            <ul>
+              <li><a href="#why">الأعضاء</a></li>
+              <li><a href="#reports">التقارير</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>الإنتاج</h3>
+            <ul>
+              <li><a href="#automation">الأتمتة</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>التخزين</h3>
+            <ul>
+              <li><a href="#repository">المستودع</a></li>
+              <li><a href="#repository">الأرشيف الخارجي</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>النظام</h3>
+            <ul>
+              <li><a href="#system">الإعدادات</a></li>
+              <li><a href="#system">النسخ الاحتياطي</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 04 · المهام والمراحل                                          -->
+    <!-- ============================================================ -->
+    <section class="slide slide-tasks" id="tasks" data-slide="tasks" data-label="المهام" aria-labelledby="tasks-title">
+      <div class="frame">
+        <div class="two-col">
+          <div class="demo-side">
+            <div class="task-demo demo-ui" id="task-demo" data-ui>
+              <header class="task-demo-head">
+                <div>
+                  <span class="demo-chip">الريلز</span>
+                  <h3>ريل: آداب دخول المسجد</h3>
+                  <p class="task-meta">مسؤول المهمة: سارة · الاستحقاق: ١٨ نوفمبر</p>
+                </div>
+                <div class="task-score"><b data-task-pct>50٪</b><span data-task-count>3 من 6 مراحل</span></div>
+              </header>
+              <div class="progress-track" aria-hidden="true"><span data-task-bar style="width:50%"></span></div>
+              <ol class="stage-list" id="stage-list" aria-label="مراحل المهمة"></ol>
+              <footer class="task-demo-foot">
+                <p class="demo-hint" data-task-hint aria-live="polite">اضغط المرحلة الحالية لتسجيلها باسمك.</p>
+                <button class="text-btn" type="button" data-task-reset>أعد التجربة</button>
+              </footer>
+            </div>
+            <p class="caption">عرض تفاعلي مبني على مراحل النظام — الاسم والتاريخ يُسجَّلان عند كل إنجاز.</p>
+          </div>
+
+          <div class="copy-side">
+            <h2 id="tasks-title" data-reveal>المهمة ليست<br>علامة «تم».</h2>
+            <p class="lede" data-reveal style="--d:1">كل مهمة تمشي في مراحل يعرّفها قالب مجموعتها. عند إنجاز أي مرحلة يُسجَّل الاسم والتاريخ، وتظل المرحلة التالية واضحة للجميع.</p>
+            <dl class="point-list" data-reveal style="--d:2">
+              <div><dt>من أنجز، لا من أرسل</dt><dd>سجل المرحلة يحمل اسم العضو وتاريخ الإنجاز، لا مجرد رسالة «تم».</dd></div>
+              <div><dt>القالب يمنع نسيان خطوة</dt><dd>اختيار الفكرة، التصوير، التفريغ، المونتاج، النشر — بترتيب واحد يعرفه الفريق.</dd></div>
+              <div><dt>كل شيء داخل المهمة</dt><dd>الموعد والمسؤول والأولوية والملاحظات في بطاقة واحدة، لا موزعة على المحادثات.</dd></div>
+            </dl>
+            <figure class="screenshot screenshot-small" data-reveal style="--d:3">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span dir="ltr">task — ريل آداب المسجد</span></div>
+              <img src="assets/ui/task-detail.png" width="1600" height="1000" alt="نافذة تفاصيل المهمة: المراحل المنجزة مع أسماء الأعضاء، والمرحلة الحالية، ونسبة التقدم." loading="lazy">
+            </figure>
+            <p class="caption">لقطة من نافذة المهمة داخل النظام.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 05 · المجموعات والقوالب                                       -->
+    <!-- ============================================================ -->
+    <section class="slide slide-groups" id="groups" data-slide="groups" data-label="المجموعات" aria-labelledby="groups-title">
+      <div class="frame">
+        <div class="groups-head">
+          <div>
+            <h2 id="groups-title" data-reveal>قوالب ثابتة.<br>تنفيذ مرن.</h2>
+          </div>
+          <p class="lede" data-reveal style="--d:1">مجموعة لكل خط إنتاج: الخطب، دروس الفجر، الريلز، وريلز من الدروس. القالب يضمن ألا تُنسى مرحلة، والمجموعة تجمع كل ما يخص الحدث نفسه.</p>
+        </div>
+
+        <div class="groups-layout">
+          <div class="group-tabs" role="tablist" aria-label="مجموعات المكتب" data-reveal style="--d:2">
+            <button type="button" role="tab" id="group-tab-0" aria-controls="group-panel" aria-selected="true" data-group="0">
+              <span class="group-dot" style="--group-color:#ff9f0a"></span>
+              <span class="group-copy"><b>الخطب</b><small>4 مهام · 2 مكتملة</small></span>
+              <span class="group-pct">50٪</span>
+              <span class="group-bar"><i style="width:50%;--group-color:#ff9f0a"></i></span>
+            </button>
+            <button type="button" role="tab" id="group-tab-1" aria-controls="group-panel" aria-selected="false" data-group="1">
+              <span class="group-dot" style="--group-color:#0a84ff"></span>
+              <span class="group-copy"><b>دروس الفجر</b><small>3 مهام · 1 مكتملة</small></span>
+              <span class="group-pct">33٪</span>
+              <span class="group-bar"><i style="width:33%;--group-color:#0a84ff"></i></span>
+            </button>
+            <button type="button" role="tab" id="group-tab-2" aria-controls="group-panel" aria-selected="false" data-group="2">
+              <span class="group-dot" style="--group-color:#6c63ff"></span>
+              <span class="group-copy"><b>الريلز</b><small>3 مهام · 1 مكتملة</small></span>
+              <span class="group-pct">33٪</span>
+              <span class="group-bar"><i style="width:33%;--group-color:#6c63ff"></i></span>
+            </button>
+            <button type="button" role="tab" id="group-tab-3" aria-controls="group-panel" aria-selected="false" data-group="3">
+              <span class="group-dot" style="--group-color:#30b85a"></span>
+              <span class="group-copy"><b>ريلز من الدروس</b><small>مهمتان · لم تبدأ</small></span>
+              <span class="group-pct">0٪</span>
+              <span class="group-bar"><i style="width:0%;--group-color:#30b85a"></i></span>
+            </button>
+          </div>
+
+          <div class="group-panel" id="group-panel" role="tabpanel" aria-labelledby="group-tab-0" tabindex="0" data-reveal style="--d:3">
+            <p class="group-kicker">قالب المجموعة</p>
+            <h3 data-group-name>الخطب</h3>
+            <p data-group-desc>إنتاج وتوثيق خطب الجمعة.</p>
+            <ol class="template-stages" data-group-stages></ol>
+            <div class="group-panel-foot">
+              <span>مهمة جديدة داخل المجموعة ترث هذه المراحل تلقائيًا.</span>
+              <a class="text-link" href="#tasks">أنشئ مهمة</a>
+            </div>
+          </div>
+        </div>
+
+        <p class="groups-note" data-reveal style="--d:4">تعديل القالب يغيّر المهام الجديدة فقط؛ المهمة التي بدأت تحتفظ بمراحلها الأصلية حتى تنتهي.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 06 · الأتمتة                                                  -->
+    <!-- ============================================================ -->
+    <section class="slide slide-automation" id="automation" data-slide="automation" data-label="الأتمتة" aria-labelledby="automation-title">
+      <div class="frame">
+        <div class="automation-head">
+          <div>
+            <h2 id="automation-title" data-reveal>سلّمها للوكيل.<br>وراقب كل خطوة.</h2>
+          </div>
+          <p class="lede" data-reveal style="--d:1">اربط <span dir="ltr">opencode</span> بالمهمة، اختر البرومت والموديل، ثم تابع المرحلة والنسبة والوقت والتكلفة لحظة بلحظة. النتائج في <span dir="ltr">output</span>، والعمل التقني في <span dir="ltr">opencode</span>.</p>
+        </div>
+
+        <div class="two-col two-col-automation">
+          <div class="run-panel demo-ui" id="run-panel" data-ui>
+            <header class="run-head">
+              <div>
+                <span class="demo-chip">عرض توضيحي</span>
+                <h3>مونتاج ريل من درس</h3>
+                <p class="run-sub">المهمة: ريل آداب المسجد · الموديل: <span dir="ltr">deepseek-v4.1-flash</span></p>
+              </div>
+              <span class="run-status" data-run-status>جاهز</span>
+            </header>
+            <div class="run-phase" data-run-phase>بانتظار بدء التشغيل</div>
+            <div class="run-bar" aria-hidden="true"><span data-run-bar></span></div>
+            <div class="run-metrics">
+              <div><span>التقدم</span><b data-run-pct>0٪</b></div>
+              <div><span>الوقت</span><b data-run-time>00:00</b></div>
+              <div><span>التوكنز</span><b data-run-tokens>0</b></div>
+              <div><span>التكلفة</span><b data-run-cost dir="ltr">$0.0000</b></div>
+            </div>
+            <ol class="run-steps" data-run-steps aria-label="مراحل التشغيل"></ol>
+            <div class="run-output" data-run-output hidden>
+              <span>الملفات الناتجة</span>
+              <ul>
+                <li dir="ltr">output/reel-final.mp4</li>
+                <li dir="ltr">output/cover.jpg</li>
+                <li dir="ltr">opencode/status.json</li>
+              </ul>
+            </div>
+            <div class="run-actions">
+              <button class="btn btn-primary btn-small" type="button" data-run-start>شغّل عرضًا تجريبيًا</button>
+              <button class="text-btn" type="button" data-run-reset>إعادة</button>
+              <span class="demo-note">محاكاة تعليمية — ليست تشغيلًا حقيقيًا.</span>
+            </div>
+          </div>
+
+          <div class="copy-side">
+            <dl class="point-list" data-reveal style="--d:2">
+              <div><dt>برومتات جاهزة وقابلة للتعديل</dt><dd>اكتب برومت المكتب مرة، ثم عدّله قبل كل تشغيل وأضف ملاحظات المهمة.</dd></div>
+              <div><dt>الموديل تحت السيطرة</dt><dd>اختر الموديل لكل تشغيل، وامنع الموديلات المكلفة من الظهور في قائمة البدء.</dd></div>
+              <div><dt>سجل كامل للتكلفة</dt><dd>التوكنز والتكلفة ومدة التشغيل ونسبة النجاح — لكل تشغيل، ولكل موديل ومجموعة.</dd></div>
+              <div><dt>لا يعمل في الخفاء</dt><dd>التشغيل يحتاج تطبيق سطح المكتب، والحالة تُقرأ من <span dir="ltr">status.json</span> مباشرة.</dd></div>
+            </dl>
+            <figure class="screenshot screenshot-small screenshot-automation" data-reveal style="--d:3">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span dir="ltr">automation — live</span></div>
+              <img src="assets/ui/automation-dark.png" width="1600" height="1000" alt="شاشة الأتمتة: تشغيل جارٍ بنسبة 45%، وسجل التشغيلات مع الموديل والتكلفة." loading="lazy">
+            </figure>
+            <p class="caption">شاشة الأتمتة داخل النظام — بيانات تجريبية.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 07 · المستودع والأرشيف                                        -->
+    <!-- ============================================================ -->
+    <section class="slide slide-repository" id="repository" data-slide="repository" data-label="المستودع" aria-labelledby="repository-title">
+      <div class="frame">
+        <div class="repo-head">
+          <div>
+            <h2 id="repository-title" data-reveal>لا ملف يضيع<br>بعد اليوم.</h2>
+          </div>
+          <p class="lede" data-reveal style="--d:1">لكل مجموعة مجلد، ولكل مهمة مجلد: المصادر، المخرجات، و<span dir="ltr">opencode</span>. الأرشفة إلى هارد خارجي لا تحذف شيئًا قبل التحقق من كل ملف بـ<span dir="ltr">SHA-256</span>، وسلة المحذوفات تعيد ما حُذف خلال سبعة أيام.</p>
+        </div>
+
+        <div class="repo-layout">
+          <div class="repo-copy">
+            <ul class="file-tree" data-reveal style="--d:2" aria-label="بنية مجلد المستودع">
+              <li class="tree-root">MosqueMediaRepo/</li>
+              <li class="tree-file">mosque-media-office.repo.json</li>
+              <li class="tree-file">mosque-media-office.data.json</li>
+              <li class="tree-folder">الخطب/
+                <ul>
+                  <li class="tree-folder">2026 - خطبة الجمعة/
+                    <ul>
+                      <li class="tree-file">output/</li>
+                      <li class="tree-file">opencode/</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li class="tree-folder">دروس الفجر/
+                <ul><li class="tree-folder">2026 - درس الفجر/
+                  <ul><li class="tree-file">output/</li><li class="tree-file">opencode/</li></ul>
+                </li></ul>
+              </li>
+              <li class="tree-folder">بدون مجموعة/</li>
+            </ul>
+
+            <dl class="point-list point-list-compact" data-reveal style="--d:3">
+              <div><dt>الأرشفة متحقَّق منها</dt><dd>نسخ، ثم SHA-256، ثم إيصال، ثم حذف المصدر — بهذا الترتيب فقط.</dd></div>
+              <div><dt>الحذف يمرّ بالسلة</dt><dd>سبعة أيام للاستعادة، والحذف النهائي إجراء صريح منفصل.</dd></div>
+              <div><dt>القرص يتغيّر، الملفات لا</dt><dd>إذا صار <span dir="ltr">E:</span> هو <span dir="ltr">F:</span>، يعيد النظام الربط بمعرّف المستودع.</dd></div>
+            </dl>
+          </div>
+
+          <div class="repo-visual">
+            <figure class="screenshot screenshot-repo" data-reveal style="--d:2">
+              <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span dir="ltr">repository — storage</span></div>
+              <img src="assets/ui/repository.png" width="1600" height="1000" alt="شاشة المستودع: المستودع الأساسي وهارد الأرشيف، توزيع المساحة، أكبر المهام استهلاكًا، وسلة المحذوفات." loading="lazy">
+            </figure>
+
+            <div class="verify-panel demo-ui" id="verify-panel" data-ui data-reveal style="--d:3">
+              <header class="verify-head">
+                <div>
+                  <span class="demo-chip">عرض توضيحي</span>
+                  <h3>أرشفة قسم «المخرجات»</h3>
+                  <p>7.02 GB · 42 ملفًا → هارد الأرشيف</p>
+                </div>
+                <span class="verify-result" data-verify-result>جاهز</span>
+              </header>
+              <ol class="verify-steps" data-verify-steps aria-label="خطوات الأرشفة المتحقق منها"></ol>
+              <div class="verify-actions">
+                <button class="btn btn-primary btn-small" type="button" data-verify-start>ابدأ الأرشفة</button>
+                <button class="text-btn" type="button" data-verify-fail>جرّب انقطاعًا</button>
+              </div>
+              <p class="verify-note" data-verify-note aria-live="polite">لا يُحذف المصدر قبل مطابقة بصمة كل ملف وكتابة الإيصال.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 08 · التقارير                                                 -->
+    <!-- ============================================================ -->
+    <section class="slide slide-reports" id="reports" data-slide="reports" data-label="التقارير" aria-labelledby="reports-title">
+      <div class="frame">
+        <div class="reports-layout">
+          <figure class="screenshot screenshot-report" data-reveal style="--d:2">
+            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span dir="ltr">reports — تقرير الإنجاز</span></div>
+            <img src="assets/ui/reports.png" width="1600" height="1000" alt="تقرير الإنجاز: المهام المنشأة والمكتملة والمراحل والمتأخرة، منحنى النشاط، توزيع المراحل، وجداول حسب المجموعة والعضو." loading="lazy">
+          </figure>
+
+          <div class="copy-side">
+            <h2 id="reports-title" data-reveal>الأرقام تجيب<br>قبل أن تسأل.</h2>
+            <p class="lede" data-reveal style="--d:1">تقارير حسب الفترة والمجموعة والعضو: ما أُنجز، ما تأخر، من حمل الحمل الأكبر، وكم كلّفت الأتمتة. تُصدَّر إلى Excel أو JSON، وتُستورد على جهاز آخر.</p>
+            <div class="report-stats" data-reveal style="--d:2">
+              <div><b data-count="12">12</b><span>مهمة منشأة</span></div>
+              <div><b data-count="31">31</b><span>مرحلة منجزة</span></div>
+              <div><b data-count="1">1</b><span>مهمة متأخرة</span></div>
+              <div><b>٦٧٪</b><span>نجاح الأتمتة</span></div>
+            </div>
+            <dl class="point-list" data-reveal style="--d:3">
+              <div><dt>ملخص الإنجاز</dt><dd>منشأة، مكتملة، مراحل، ومتأخرة — في أعلى التقرير.</dd></div>
+              <div><dt>حسب المجموعة والعضو</dt><dd>من أنجز أكثر، وأين يتوقف العمل، وأي مجموعة تتأخر.</dd></div>
+              <div><dt>قسم الأتمتة</dt><dd>التشغيلات، نسبة النجاح، التوكنز، والتكلفة لكل موديل ومجموعة.</dd></div>
+              <div><dt>جاهز للاجتماع</dt><dd>طباعة تقرير نظيف، أو تصدير Excel للتحليل والنسخ الاحتياطي.</dd></div>
+            </dl>
+            <p class="caption">أرقام اللقطة من البيانات التجريبية.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 09 · لماذا يهم                                                -->
+    <!-- ============================================================ -->
+    <section class="slide slide-why" id="why" data-slide="why" data-label="لماذا يهم" aria-labelledby="why-title">
+      <div class="frame">
+        <div class="why-head">
+          <h2 id="why-title" data-reveal>لماذا يستحق هذا النظام مكانه؟</h2>
+          <p class="why-lead" data-reveal style="--d:1">لأن العمل الإعلامي لا يُقاس بالنيّة، بل بما وصل.</p>
+        </div>
+        <div class="why-grid">
+          <article data-reveal style="--d:2">
+            <h3>لأن الخطبة لا تنتظر أن يتذكّر أحد.</h3>
+            <p>مرحلة لها مسؤول، وموعد، وسجل. التأخير يظهر قبل أن يصبح أزمة، والخطبة القادمة لا تعتمد على ذاكرة شخص واحد.</p>
+          </article>
+          <article data-reveal style="--d:3">
+            <h3>لأن الأرشيف ليس رفاهية.</h3>
+            <p>ملفاتك على قرصك، بأرشفة متحقق منها، وسلة تعيد ما حُذف بالخطأ. لا مساحة تضيع بلا سبب، ولا نسخة تُفقد بلا رجعة.</p>
+          </article>
+          <article data-reveal style="--d:4">
+            <h3>لأن وقت الفريق أغلى من أن يُصرف في السؤال.</h3>
+            <p>الإجابة على الشاشة: من صوّر، من عدّل، ماذا نُشر، وأين الملف. سؤال واحد أقل في كل مهمة يعني وقتًا يعود للإنتاج.</p>
+          </article>
+          <article data-reveal style="--d:5">
+            <h3>لأن الذكاء الاصطناعي بلا حساب يصبح فاتورة.</h3>
+            <p>كل تشغيل مسجّل بالتوكنز والتكلفة، ولكل مجموعة وموديل رقمه. تجرّب بثقة، وتوقف عندما تتجاوز الحد.</p>
+          </article>
+        </div>
+        <p class="why-close" data-reveal style="--d:6">النظام لا يزيد العمل.<br>يمنع العمل من أن يضيع.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 10 · الاستخدام اليومي                                          -->
+    <!-- ============================================================ -->
+    <section class="slide slide-daily" id="daily" data-slide="daily" data-label="يومك" aria-labelledby="daily-title">
+      <div class="frame">
+        <div class="daily-head">
+          <div>
+            <h2 id="daily-title" data-reveal>يومك<br>مع النظام.</h2>
+          </div>
+          <p class="lede" data-reveal style="--d:1">لا تحتاج إلى تدريب طويل. ابدأ من الشاشة، وأنهِ عند المرحلة. هذه ست لحظات يتكرر فيها النظام كل أسبوع، من أول مهمة إلى آخر أرشيف.</p>
+        </div>
+
+        <div class="daily-layout">
+          <aside class="daily-aside" data-reveal style="--d:2">
+            <div class="rule-card">
+              <p class="rule-kicker">القاعدة الذهبية</p>
+              <h3>لا تُنجز عملًا خارج مهمة.</h3>
+              <p>كل تصوير، مونتاج، تصميم، ونشر يبدأ من مهمة. حتى لا يضيع العمل في المحادثات، ولا يتحول إلى سؤال «من فعل ماذا؟».</p>
+            </div>
+            <div class="rule-card rule-card-soft">
+              <h3>ولا تُسلّم ملفًا خارج مجلد المهمة.</h3>
+              <p>المصادر والمخرجات في مكان واحد، والأرشيف يعرف طريقه، والتقرير يعرف حجمه.</p>
+            </div>
+            <figure class="phone" data-reveal style="--d:3">
+              <div class="phone-screen">
+                <img src="assets/ui/dashboard-mobile.png" width="390" height="844" alt="نسخة الجوال من نظرة عامة: بطاقات الإحصاء والمهام." loading="lazy">
+              </div>
+              <figcaption>المتابعة من الجوال — والتحرير الكامل على سطح المكتب.</figcaption>
+            </figure>
+          </aside>
+
+          <ol class="day-list" aria-label="روتين استخدام النظام">
+            <li data-reveal style="--d:2">
+              <span class="day-time">صباحًا</span>
+              <div class="day-copy">
+                <h3>ابدأ من «نظرة عامة»، لا من المحادثات.</h3>
+                <p>افتح «مهام تنتظرك» واعرف مرحلتك التالية. إن لم تكن هناك مهمة مسندة إليك، اختر مهمة قريبة الموعد من «مهام قيد المتابعة».</p>
+                <span class="day-where">نظرة عامة ← مهام تنتظرك</span>
+              </div>
+            </li>
+            <li data-reveal style="--d:3">
+              <span class="day-time">عند وصول طلب</span>
+              <div class="day-copy">
+                <h3>أنشئ المهمة قبل أن تبدأ العمل.</h3>
+                <p>اختر المجموعة أولًا ليُطبَّق قالبها، ثم اكتب العنوان والتاريخ والمسؤول. أضف الوصف والموعد والأولوية من الإعدادات المتقدمة عند الحاجة.</p>
+                <span class="day-where">المهام ← إضافة مهمة</span>
+              </div>
+              <img class="day-thumb" src="assets/ui/task-form.png" width="1600" height="1000" alt="نموذج إنشاء مهمة: اختيار المجموعة كبطاقات، ومراحل القالب تظهر أسفلها." loading="lazy">
+            </li>
+            <li data-reveal style="--d:4">
+              <span class="day-time">أثناء العمل</span>
+              <div class="day-copy">
+                <h3>أنجز مرحلتك، وسجّلها فورًا.</h3>
+                <p>افتح المهمة، اضغط «إكمال» على مرحلتك، واكتب ملاحظة قصيرة. ضع الملفات في مجلد المهمة: المصادر في الجذر، والمخرجات في <span dir="ltr">output</span>.</p>
+                <span class="day-where">المهمة ← المرحلة الحالية ← إكمال</span>
+              </div>
+            </li>
+            <li data-reveal style="--d:5">
+              <span class="day-time">قبل النشر</span>
+              <div class="day-copy">
+                <h3>راجع المراحل، ثم انشر.</h3>
+                <p>تأكد أن كل المراحل السابقة مكتملة. بعد النشر علّم «النشر» — فتصبح المهمة مكتملة وتظهر في التقارير فورًا.</p>
+                <span class="day-where">المهمة ← آخر مرحلة</span>
+              </div>
+            </li>
+            <li data-reveal style="--d:6">
+              <span class="day-time">نهاية اليوم</span>
+              <div class="day-copy">
+                <h3>خمس دقائق لترتيب الغد.</h3>
+                <p>راجع «متأخرة» و«قرب الموعد». أعد ترتيب الأولويات، وأضف ملاحظة لأي مهمة ستحتاج متابعة صباحًا.</p>
+                <span class="day-where">المهام ← متأخرة</span>
+              </div>
+            </li>
+            <li data-reveal style="--d:7">
+              <span class="day-time">نهاية الأسبوع</span>
+              <div class="day-copy">
+                <h3>أغلق الأسبوع بتقرير وأرشيف.</h3>
+                <p>صدّر تقرير Excel للاجتماع، وأرشف مهام الشهر المنتهية إلى الهارد الخارجي. تأكد من النسخة الاحتياطية قبل أي تنظيف.</p>
+                <span class="day-where">التقارير ← تصدير · المستودع ← أرشفة</span>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 11 · البدء                                                    -->
+    <!-- ============================================================ -->
+    <section class="slide slide-start" id="start" data-slide="start" data-label="البدء" aria-labelledby="start-title">
+      <div class="frame">
+        <div class="start-head">
+          <div>
+            <h2 id="start-title" data-reveal>من التثبيت<br>إلى أول مهمة.</h2>
+            <p class="lede" data-reveal style="--d:1">خمس خطوات، مرة واحدة. بعدها يصبح النظام جزءًا من الروتين، لا مهمة إضافية.</p>
+          </div>
+          <figure class="screenshot screenshot-start" data-reveal style="--d:2">
+            <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i><span dir="ltr">onboarding — إنشاء المساحة</span></div>
+            <img src="assets/ui/onboarding.png" width="1600" height="1000" alt="شاشة البدء: اسم المسجد، أعضاء الفريق، وخيار إضافة بيانات تجريبية." loading="lazy">
+          </figure>
+        </div>
+
+        <ol class="start-steps">
+          <li data-reveal style="--d:2">
+            <span class="step-num">1</span>
+            <h3>ثبّت النسخة</h3>
+            <p>استخدم مثبّت Windows أو النسخة المحمولة. لا تحتاج إنترنت للعمل اليومي، ولا حسابًا ولا اشتراكًا.</p>
+          </li>
+          <li data-reveal style="--d:3">
+            <span class="step-num">2</span>
+            <h3>عرّف المكتب</h3>
+            <p>اسم المسجد وأسماء الفريق. الأعضاء بلا كلمات مرور؛ الاسم وحده يكفي لتوثيق الإنجاز.</p>
+          </li>
+          <li data-reveal style="--d:4">
+            <span class="step-num">3</span>
+            <h3>تعلّم على مثال</h3>
+            <p>فعّل البيانات التجريبية، جرّب مهمة كاملة وتقريرًا، ثم امسحها من الإعدادات عندما تبدأ بالبيانات الحقيقية.</p>
+          </li>
+          <li data-reveal style="--d:5">
+            <span class="step-num">4</span>
+            <h3>اربط المستودع</h3>
+            <p>من الإعدادات ← المستودع، اختر مجلدًا على القرص. سينشئ النظام مجلدًا لكل مجموعة ومهمة، ويحفظ فهرسًا للربط.</p>
+          </li>
+          <li data-reveal style="--d:6">
+            <span class="step-num">5</span>
+            <h3>أنشئ أول مهمة</h3>
+            <p>اختر المجموعة ليُطبَّق قالبها، وحدد التاريخ والمسؤول. من هنا يبدأ كل شيء: المرحلة، الملف، والتقرير.</p>
+          </li>
+        </ol>
+
+        <aside class="admin-note" data-reveal style="--d:7">
+          <div>
+            <h3>للمسؤول</h3>
+            <p>الأتمتة تحتاج تثبيت <span dir="ltr">opencode</span> والتحقق من الاتصال في الإعدادات. الأرشيف الخارجي يحتاج قرصًا ثانيًا. عيّن كلمة مرور للإعدادات إن أردت حماية الأعضاء والهوية من التعديل.</p>
+          </div>
+          <a class="text-link" href="https://github.com/Enderknght159/mosque-media-office#readme">دليل التشغيل الكامل</a>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- 12 · الخاتمة                                                  -->
+    <!-- ============================================================ -->
+    <section class="slide slide-closing" id="closing" data-slide="closing" data-label="الخاتمة" aria-labelledby="closing-title">
+      <div class="closing-arch" aria-hidden="true"></div>
+      <div class="frame closing-frame">
+        <div class="closing-copy">
+          <h2 id="closing-title" data-reveal>افتح النظام.<br>وابدأ من أول مهمة.</h2>
+          <p class="lede" data-reveal style="--d:1">كل ما تحتاجه اليوم موجود في الشاشة الأولى: مهامك، مرحلتك التالية، وملفاتك. والباقي يُبنى مرة واحدة، ثم يعمل من أجلك.</p>
+          <div class="hero-actions" data-reveal style="--d:2">
+            <a class="btn btn-primary" href="https://github.com/Enderknght159/mosque-media-office" target="_blank" rel="noopener">استعرض المستودع
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/Enderknght159/mosque-media-office#readme" target="_blank" rel="noopener">اقرأ دليل التشغيل</a>
+          </div>
+          <p class="caption" data-reveal style="--d:3">الإصدار 2.2.2 · بيانات محلية · لا حساب ولا اشتراك.</p>
+        </div>
+        <div class="closing-mark" data-reveal style="--d:2" aria-hidden="true">
+          <img src="assets/logo.svg" alt="" width="120" height="120">
+          <span>المكتب الإعلامي<br><b>نظام المتابعة</b></span>
+        </div>
+      </div>
+      <footer class="closing-footer">
+        <div class="frame closing-footer-inner">
+          <span>نظام متابعة المكتب الإعلامي في المسجد</span>
+          <nav aria-label="روابط الخاتمة">
+            <a href="#hero">العودة إلى البداية</a>
+            <a href="#daily">الاستخدام اليومي</a>
+            <a href="#system">الإعدادات</a>
+          </nav>
+          <span dir="ltr">mosque-media-office · v2.2.2</span>
+        </div>
+      </footer>
+    </section>
+
+  </main>
+
+  <nav class="track" aria-label="محطات العرض">
+    <span class="track-current" id="track-current">البداية</span>
+    <div class="track-dots">
+      <button type="button" data-goto="hero" aria-label="البداية" aria-current="true"><i></i><span>البداية</span></button>
+      <button type="button" data-goto="story" aria-label="المشكلة"><i></i><span>المشكلة</span></button>
+      <button type="button" data-goto="system" aria-label="النظام"><i></i><span>النظام</span></button>
+      <button type="button" data-goto="tasks" aria-label="المهام"><i></i><span>المهام</span></button>
+      <button type="button" data-goto="groups" aria-label="المجموعات"><i></i><span>المجموعات</span></button>
+      <button type="button" data-goto="automation" aria-label="الأتمتة"><i></i><span>الأتمتة</span></button>
+      <button type="button" data-goto="repository" aria-label="المستودع"><i></i><span>المستودع</span></button>
+      <button type="button" data-goto="reports" aria-label="التقارير"><i></i><span>التقارير</span></button>
+      <button type="button" data-goto="why" aria-label="لماذا يهم"><i></i><span>لماذا</span></button>
+      <button type="button" data-goto="daily" aria-label="يومك"><i></i><span>يومك</span></button>
+      <button type="button" data-goto="start" aria-label="البدء"><i></i><span>البدء</span></button>
+      <button type="button" data-goto="closing" aria-label="الخاتمة"><i></i><span>الخاتمة</span></button>
+    </div>
+    <span class="track-count"><b id="slide-index">01</b><span>/ 12</span></span>
+  </nav>
+
+  <script src="presentation.js"></script>
+</body>
+</html>
